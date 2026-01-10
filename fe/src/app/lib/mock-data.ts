@@ -1,5 +1,5 @@
 // Mock Data untuk Sistem Peminjaman Alat
-import { User, Category, Tool, Borrowing, Notification, ActivityLog } from './types';
+import type { User, Category, Tool, Borrowing, Notification, ActivityLog } from './types';
 
 // Generate QR Code URL
 export const generateQRCode = (data: string): string => {

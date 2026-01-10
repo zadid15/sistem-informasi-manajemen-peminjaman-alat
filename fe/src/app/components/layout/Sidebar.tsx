@@ -16,7 +16,7 @@ import {
   UserCircle,
 } from 'lucide-react';
 import { cn } from '../ui/utils';
-import { UserRole } from '../../lib/types';
+import type { UserRole } from '../../lib/types';
 import { useApp } from '../../lib/context';
 
 interface MenuItem {

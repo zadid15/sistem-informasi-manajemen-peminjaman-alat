@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Camera, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Camera, CheckCircle, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 

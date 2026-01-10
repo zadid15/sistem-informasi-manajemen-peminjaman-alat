@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertCircle, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import {
   AlertDialog,

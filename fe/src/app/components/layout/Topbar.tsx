@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Bell, Search, Menu, X, Check, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, Search, Check, ChevronDown } from 'lucide-react';
 import { useApp } from '../../lib/context';
-import { UserRole } from '../../lib/types';
+import type { UserRole } from '../../lib/types';
 import { cn } from '../ui/utils';
 import { Badge } from '../ui/badge';
 

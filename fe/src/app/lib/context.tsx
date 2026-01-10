@@ -1,6 +1,6 @@
 // Context untuk state global aplikasi
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { UserRole, User, Notification, Borrowing, Tool } from './types';
+import { createContext, useContext, useState, type ReactNode } from 'react';
+import type { UserRole, User, Notification, Borrowing, Tool } from './types';
 import { mockUsers, mockNotifications, mockBorrowings, mockTools, generateQRCode } from './mock-data';
 
 interface AppContextType {
@@ -140,7 +140,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 }
 
 export function useApp() {
-  const context = useContext(AppContext);
+const context = useContext(AppContext);
   if (!context) {
     throw new Error('useApp must be used within AppProvider');
   }
