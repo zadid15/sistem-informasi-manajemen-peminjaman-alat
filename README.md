@@ -104,8 +104,10 @@ Struktur repository menggunakan **1 repository dengan 2 folder utama (Frontend &
 
 ```bash
 nama-repository/
-├── frontend/   # React + TypeScript
-└── backend/    # Laravel
+├── fe/   # React + TypeScript
+├── be/    # Laravel
+├── .gitignore
+└── README.md
 ```
 
 ### 1️⃣ Clone Repository
