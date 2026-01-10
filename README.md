@@ -99,16 +99,46 @@ Aplikasi memiliki **3 level pengguna** dengan hak akses berbeda:
 ---
 
 ## 🚀 Cara Menjalankan Proyek
+
+Struktur repository menggunakan **1 repository dengan 2 folder utama (Frontend & Backend)**.
+
 ```bash
-# clone repository
-git clone https://github.com/zadid15/sistem-informasi-managemen-peminjaman-alat.git
-
-# masuk ke folder proyek
-cd sistem-informasi-managemen-peminjaman-alat
-
-# jalankan aplikasi
-# (sesuaikan dengan teknologi yang digunakan)
+nama-repository/
+├── frontend/   # React + TypeScript
+└── backend/    # Laravel
 ```
+
+### 1️⃣ Clone Repository
+```bash
+git clone https://github.com/zadid15/sistem-managemen-informasi-peminjaman-alat.git
+cd sistem-managemen-informasi-peminjaman-alat
+```
+
+---
+
+### 2️⃣ Menjalankan Frontend (React + TypeScript)
+```bash
+cd fe
+npm install
+npm run dev
+
+---
+
+### 3️⃣ Menjalankan Backend (Laravel)
+```bash
+cd be
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan serve
+
+---
+
+### 4️⃣ Konfigurasi Tambahan
+- Pastikan database sudah dibuat
+- Atur koneksi database di file `.env`
+- Sesuaikan endpoint API frontend ke backend
 
 ---
 
