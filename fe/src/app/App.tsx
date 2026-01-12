@@ -1,98 +1,79 @@
-import { useState } from 'react';
-import { AppProvider, useApp } from './lib/context';
-import { MainLayout } from './components/layout/MainLayout';
-import { Toaster } from './components/ui/sonner';
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AppProvider } from "./lib/context";
+import { Toaster } from "./components/ui/sonner";
+
+// Pages
+import Login from "./pages/auth/Login";
 
 // Admin Pages
-import { AdminDashboard } from './pages/admin/Dashboard';
-import { ManageUsers } from './pages/admin/ManageUsers';
-import { ManageTools } from './pages/admin/ManageTools';
-import { ManageCategories } from './pages/admin/ManageCategories';
-import { DataBorrowings } from './pages/admin/DataBorrowings';
-import { DataReturns } from './pages/admin/DataReturns';
-import { ActivityLogs } from './pages/admin/ActivityLogs';
+import { AdminDashboard } from "./pages/admin/Dashboard";
+import { ManageUsers } from "./pages/admin/ManageUsers";
 
 // Petugas Pages
-import { PetugasDashboard } from './pages/petugas/Dashboard';
-import { ApprovalBorrowings } from './pages/petugas/Approval';
-import { MonitoringReturns } from './pages/petugas/Monitoring';
-import { ScanQR } from './pages/petugas/ScanQR';
-import { Reports } from './pages/petugas/Reports';
+import { PetugasDashboard } from "./pages/petugas/Dashboard";
 
 // Peminjam Pages
-import { PeminjamDashboard } from './pages/peminjam/Dashboard';
-import { ToolsList } from './pages/peminjam/ToolsList';
-import { MyBorrowings } from './pages/peminjam/MyBorrowings';
-import { PeminjamReturns } from './pages/peminjam/Returns';
+import { PeminjamDashboard } from "./pages/peminjam/Dashboard";
 
-// Shared Pages
-import { NotificationsPage } from './pages/shared/Notifications';
-
-function AppContent() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const { currentRole } = useApp();
-
-  const renderPage = () => {
-    // Dashboard berdasarkan role
-    if (currentPage === 'dashboard') {
-      if (currentRole === 'admin') return <AdminDashboard />;
-      if (currentRole === 'petugas') return <PetugasDashboard />;
-      if (currentRole === 'peminjam') return <PeminjamDashboard />;
-    }
-
-    switch (currentPage) {
-      // Admin Routes
-      case 'users':
-        return <ManageUsers />;
-      case 'tools':
-        return <ManageTools />;
-      case 'categories':
-        return <ManageCategories />;
-      case 'borrowings':
-        return <DataBorrowings />;
-      case 'returns':
-        return currentRole === 'admin' ? <DataReturns /> : <PeminjamReturns />;
-      case 'logs':
-        return <ActivityLogs />;
-
-      // Petugas Routes
-      case 'approval':
-        return <ApprovalBorrowings />;
-      case 'monitoring':
-        return <MonitoringReturns />;
-      case 'scan':
-        return <ScanQR />;
-      case 'reports':
-        return <Reports />;
-
-      // Peminjam Routes
-      case 'tools-list':
-        return <ToolsList />;
-      case 'my-borrowings':
-        return <MyBorrowings />;
-
-      // Shared Routes
-      case 'notifications':
-        return <NotificationsPage />;
-
-      default:
-        if (currentRole === 'admin') return <AdminDashboard />;
-        if (currentRole === 'petugas') return <PetugasDashboard />;
-        return <PeminjamDashboard />;
-    }
-  };
-
-  return (
-    <MainLayout currentPage={currentPage} onNavigate={setCurrentPage}>
-      {renderPage()}
-    </MainLayout>
-  );
-}
+// Shared Components
+import { MainLayout } from "./components/layout/MainLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   return (
     <AppProvider>
-      <AppContent />
+      <Router>
+        <Routes>
+          {/* Public */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Admin */}
+          <Route
+            path="/admin/*"
+            element={
+              <ProtectedRoute role="admin">
+                <MainLayout currentPage="dashboard" onNavigate={() => { }}>
+                  <Routes>
+                    <Route path="" element={<AdminDashboard />} />
+                    <Route path="users" element={<ManageUsers />} />
+                  </Routes>
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Petugas */}
+          <Route
+            path="/petugas/*"
+            element={
+              <ProtectedRoute role="petugas">
+                <MainLayout currentPage="dashboard" onNavigate={() => { }}>
+                  <Routes>
+                    <Route path="" element={<PetugasDashboard />} />
+                  </Routes>
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Peminjam */}
+          <Route
+            path="/peminjam/*"
+            element={
+              <ProtectedRoute role="peminjam">
+                <MainLayout currentPage="dashboard" onNavigate={() => { }}>
+                  <Routes>
+                    <Route path="" element={<PeminjamDashboard />} />
+                  </Routes>
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Default redirect */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Router>
       <Toaster position="top-right" richColors />
     </AppProvider>
   );
