@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Kategori;
 use App\Models\Log;
-use App\Models\User;
-use App\Models\UserLog;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
-class UserController extends Controller
+class KategoriController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -27,37 +25,33 @@ class UserController extends Controller
         // Ambil query parameter search
         $search = $request->query('search');
 
-        $query = User::select('id', 'nama', 'email', 'role', 'is_active', 'phone');
+        $query = Kategori::select('id', 'nama_kategori', 'deskripsi', 'foto_kategori');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('nama', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('role', 'like', "%{$search}%");
+                $q->where('nama_kategori', 'like', "%{$search}%");
             });
         }
 
-        $users = $query->paginate(10);
+        $kategori = $query->paginate(10);
 
-        $users->getCollection()->transform(function ($user) {
+        $kategori->getCollection()->transform(function ($kategori) {
             return [
-                'id' => $user->id,
-                'nama' => $user->nama,
-                'email' => $user->email,
-                'role' => $user->role,
-                'is_active' => $user->is_active,
-                'phone' => $user->phone,
+                'id' => $kategori->id,
+                'nama_kategori' => $kategori->nama_kategori,
+                'deskripsi' => $kategori->deskripsi,
+                'foto_kategori' => $kategori->foto_kategori,
             ];
         });
 
         return response()->json([
-            'message' => 'List of users',
-            'data' => $users->items(),
+            'message' => 'List of kategori',
+            'data' => $kategori->items(),
             'pagination' => [
-                'current_page' => $users->currentPage(),
-                'last_page' => $users->lastPage(),
-                'per_page' => $users->perPage(),
-                'total' => $users->total(),
+                'current_page' => $kategori->currentPage(),
+                'last_page' => $kategori->lastPage(),
+                'per_page' => $kategori->perPage(),
+                'total' => $kategori->total(),
             ]
         ]);
     }
@@ -76,11 +70,9 @@ class UserController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'nama' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => ['required', 'string', 'min:8', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/'],
-            'role' => 'required|string|in:admin,petugas,peminjam',
-            'phone' => 'required|string',
+            'nama_kategori' => 'required|string|unique:kategori,nama_kategori',
+            'deskripsi' => 'nullable|string',
+            'foto_kategori' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -91,20 +83,19 @@ class UserController extends Controller
         }
 
         $data = $validator->validated();
-        $data['password'] = Hash::make($data['password']);
 
-        $user = User::create($data);
+        $kategori = Kategori::create($data);
 
         Log::create([
             'user_id' => $aktor->id,
             'aktor' => $aktor->nama,
-            'aktivitas' => "Menambahkan user baru: {$user->nama} (ID: {$user->id})",
+            'aktivitas' => "Menambah kategori: {$kategori->nama_kategori} (ID: {$kategori->id})",
             'ip' => $request->ip(),
         ]);
 
         return response()->json([
-            'message' => 'User berhasil ditambahkan',
-            'data' => $user
+            'message' => 'Kategori berhasil ditambahkan',
+            'data' => $kategori
         ]);
     }
 
@@ -121,16 +112,16 @@ class UserController extends Controller
             ], 403);
         }
 
-        $user = User::find($id);
+        $kategori = Kategori::find($id);
 
-        if (!$user) {
+        if (!$kategori) {
             return response()->json([
-                'message' => 'User tidak ditemukan'
+                'message' => 'Kategori tidak ditemukan'
             ], 404);
         } else {
             return response()->json([
-                'message' => 'Detail user',
-                'data' => $user
+                'message' => 'Detail kategori',
+                'data' => $kategori
             ]);
         }
     }
@@ -148,39 +139,33 @@ class UserController extends Controller
             ], 403);
         }
 
-        $user = User::find($id);
+        $kategori = Kategori::find($id);
 
-        if (!$user) {
+        if (!$kategori) {
             return response()->json([
                 'success' => false,
-                'message' => 'User tidak ditemukan'
+                'message' => 'Kategori tidak ditemukan'
             ], 404);
         }
 
         $data = $request->validate([
-            'nama' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $id,
-            'password' => ['sometimes', 'required', 'string', 'min:8', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/'],
-            'role' => 'sometimes|required|string|in:admin,petugas,peminjam',
-            'phone' => 'sometimes|required|string',
+            'nama_kategori' => 'sometimes|required|string|unique:kategori,nama_kategori,' . $id,
+            'deskripsi' => 'sometimes|required|string',
+            'foto_kategori' => 'sometimes|required|string',
         ]);
 
-        if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
-        }
-
-        $user->update($data);
+        $kategori->update($data);
 
         Log::create([
             'user_id' => $aktor->id,
             'aktor' => $aktor->nama,
-            'aktivitas' => "Memperbarui user: {$user->nama} (ID: {$user->id})",
+            'aktivitas' => "Memperbarui kategori: {$kategori->nama_kategori} (ID: {$kategori->id})",
             'ip' => $request->ip(),
         ]);
 
         return response()->json([
-            'message' => 'User berhasil diperbarui',
-            'data' => $user
+            'message' => 'Kategori berhasil diperbarui',
+            'data' => $kategori
         ]);
     }
 
@@ -197,25 +182,25 @@ class UserController extends Controller
             ], 403);
         }
 
-        $user = User::find($id);
+        $kategori = Kategori::find($id);
 
-        if (!$user) {
+        if (!$kategori) {
             return response()->json([
-                'message' => 'User tidak ditemukan'
+                'message' => 'Kategori tidak ditemukan'
             ], 404);
         }
 
-        $user->delete();
+        $kategori->delete();
 
         Log::create([
             'user_id' => $aktor->id,
             'aktor' => $aktor->nama,
-            'aktivitas' => "Menghapus user: {$user->nama} (ID: {$user->id})",
+            'aktivitas' => "Menghapus kategori: {$kategori->nama_kategori} (ID: {$kategori->id})",
             'ip' => $request->ip(),
         ]);
 
         return response()->json([
-            'message' => 'User berhasil dihapus'
+            'message' => 'Kategori berhasil dihapus'
         ]);
     }
 }

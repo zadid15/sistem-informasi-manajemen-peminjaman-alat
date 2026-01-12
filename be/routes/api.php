@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\UserLogController;
+use App\Http\Controllers\LogController;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -16,9 +17,13 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 // Log routes
-Route::get('/logs', [UserLogController::class, 'index'])->middleware('auth:sanctum');
+Route::get('/logs', [LogController::class, 'index'])->middleware('auth:sanctum');
 
 // User routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
+});
+// Kategori routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('kategori', KategoriController::class);
 });

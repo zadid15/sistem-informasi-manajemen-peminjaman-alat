@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\UserLog;
+use App\Models\Log;
 use Illuminate\Http\Request;
 
-class UserLogController extends Controller
+class LogController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -20,7 +20,7 @@ class UserLogController extends Controller
             ], 403);
         }
 
-        $logs = UserLog::orderBy('created_at', 'desc')->paginate(5);
+        $logs = Log::orderBy('created_at', 'desc')->paginate(5);
 
         return response()->json([
             'data' => $logs->items(),
@@ -44,7 +44,7 @@ class UserLogController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(UserLog $userLog)
+    public function show(Log $Log)
     {
         //
     }
@@ -52,7 +52,7 @@ class UserLogController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, UserLog $userLog)
+    public function update(Request $request, Log $Log)
     {
         //
     }
@@ -60,7 +60,7 @@ class UserLogController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(UserLog $userLog)
+    public function destroy(Log $Log)
     {
         //
     }
