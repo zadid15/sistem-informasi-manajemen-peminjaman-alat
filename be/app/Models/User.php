@@ -49,4 +49,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function peminjaman()
+    {
+        return $this->hasMany(Peminjaman::class, 'id_user');
+    }
+
+    public function receivedPeminjaman()
+    {
+        return $this->hasMany(Peminjaman::class, 'received_by');
+    }
 }

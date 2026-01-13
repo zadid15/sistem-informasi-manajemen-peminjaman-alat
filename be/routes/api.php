@@ -5,7 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LogController;
-
+use App\Http\Controllers\PeminjamanController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -31,4 +31,8 @@ Route::middleware('auth:sanctum')->group(function () {
 // Alat routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('alat', AlatController::class);
+});
+// Peminjaman routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('peminjaman', PeminjamanController::class);
 });

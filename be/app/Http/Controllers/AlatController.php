@@ -60,7 +60,7 @@ class AlatController extends Controller
         });
 
         return response()->json([
-            'message' => 'List of kategori',
+            'message' => 'List of alat',
             'data' => $alat->items(),
             'pagination' => [
                 'current_page' => $alat->currentPage(),
@@ -97,7 +97,7 @@ class AlatController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'message' => 'Validasi gagal bro',
+                'message' => 'Validasi gagal',
                 'errors' => $validator->errors()
             ], 422);
         }
