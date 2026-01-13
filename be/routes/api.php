@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AlatController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\UserController;
@@ -26,4 +27,8 @@ Route::middleware('auth:sanctum')->group(function () {
 // Kategori routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('kategori', KategoriController::class);
+});
+// Alat routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('alat', AlatController::class);
 });
