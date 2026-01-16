@@ -34,7 +34,7 @@ class AlatController extends Controller
             'jumlah_tersedia',
             'jumlah_dipinjam',
             'kondisi',
-            'kategori_id'
+            'id_kategori'
         );
 
         if ($search) {
@@ -88,11 +88,14 @@ class AlatController extends Controller
             'nama_alat' => 'required|string|max:255',
             'kode_alat' => 'required|string|unique:alat,kode_alat',
             'deskripsi' => 'required|string',
-            'foto_alat' => 'required|string',
+            'foto_alat' => 'required|image|max:2048',
             'jumlah_tersedia' => 'required|integer|min:0',
             'jumlah_dipinjam' => 'required|integer|min:0',
             'kondisi' => 'required|string',
-            'kategori_id' => 'required|exists:kategori,id',
+            'id_kategori' => 'required|exists:kategori,id',
+            'harga' => 'required|integer|min:0',
+            'lokasi' => 'required|string',
+            'batas_peminjaman' => 'required|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -124,7 +127,10 @@ class AlatController extends Controller
                 'jumlah_tersedia' => $alat->jumlah_tersedia,
                 'jumlah_dipinjam' => $alat->jumlah_dipinjam,
                 'kondisi' => $alat->kondisi,
-                'kategori_id' => $alat->kategori_id,
+                'id_kategori' => $alat->id_kategori,
+                'harga' => $alat->harga,
+                'lokasi' => $alat->lokasi,
+                'batas_peminjaman' => $alat->batas_peminjaman,
             ]
         ]);
     }
@@ -167,6 +173,10 @@ class AlatController extends Controller
             'jumlah_tersedia' => 'sometimes|required|integer|min:0',
             'jumlah_dipinjam' => 'sometimes|required|integer|min:0',
             'kondisi' => 'sometimes|required|string',
+            'id_kategori' => 'sometimes|required|exists:kategori,id',
+            'harga' => 'sometimes|required|integer|min:0',
+            'lokasi' => 'sometimes|required|string',
+            'batas_peminjaman' => 'sometimes|required|integer|min:0',
         ]);
 
         $alat->update($data);

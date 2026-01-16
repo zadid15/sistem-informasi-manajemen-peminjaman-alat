@@ -34,5 +34,24 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 // Peminjaman routes
 Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('peminjaman', PeminjamanController::class);
+
+    // =====================
+    // PEMINJAM
+    // =====================
+    Route::post('/peminjaman', [PeminjamanController::class, 'ajukan']);
+    Route::get('/peminjaman/saya', [PeminjamanController::class, 'saya']);
+    Route::post('/peminjaman/{id}/ajukan_pengembalian', [PeminjamanController::class, 'ajukanPengembalian']);
+
+    // =====================
+    // PETUGAS
+    // =====================
+    Route::post('/peminjaman/{id}/setujui', [PeminjamanController::class, 'setujui']);
+    Route::post('/peminjaman/{id}/tolak', [PeminjamanController::class, 'tolak']);
+    Route::post('/peminjaman/{id}/konfirmasi_pengembalian', [PeminjamanController::class, 'konfirmasiPengembalian']);
+
+    // =====================
+    // ADMIN
+    // =====================
+    Route::get('/peminjaman', [PeminjamanController::class, 'index']);
+    Route::delete('/peminjaman/{id}', [PeminjamanController::class, 'destroy']);
 });

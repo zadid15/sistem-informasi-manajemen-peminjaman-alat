@@ -59,4 +59,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Peminjaman::class, 'received_by');
     }
+
+    public function approvedPeminjaman()
+    {
+        return $this->hasMany(Peminjaman::class, 'approved_by');
+    }
 }

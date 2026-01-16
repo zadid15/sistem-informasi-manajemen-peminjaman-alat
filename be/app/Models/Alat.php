@@ -9,7 +9,7 @@ class Alat extends Model
     protected $table = 'alat';
 
     protected $fillable = [
-        'kategori_id',
+        'id_kategori',
         'nama_alat',
         'kode_alat',
         'deskripsi',
@@ -17,10 +17,18 @@ class Alat extends Model
         'jumlah_tersedia',
         'jumlah_dipinjam',
         'kondisi',
+        'lokasi',
+        'harga',
+        'batas_peminjaman',
     ];
 
     public function kategori()
     {
-        return $this->belongsTo(Kategori::class, 'kategori_id');
+        return $this->belongsTo(Kategori::class, 'id_kategori');
+    }
+
+    public function detailPeminjaman()
+    {
+        return $this->hasMany(DetailPeminjaman::class, 'id_alat');
     }
 }

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('alat', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('kategori_id')->constrained("kategori")->onDelete('cascade');
+            $table->foreignId('id_kategori')->constrained("kategori")->onDelete('cascade');
             $table->string('nama_alat');
             $table->string('kode_alat');
             $table->string('deskripsi');
@@ -21,6 +21,9 @@ return new class extends Migration
             $table->integer('jumlah_tersedia');
             $table->integer('jumlah_dipinjam');
             $table->string('kondisi');
+            $table->string('lokasi');
+            $table->integer('harga');
+            $table->integer('batas_peminjaman');
             $table->timestamps();
         });
     }
