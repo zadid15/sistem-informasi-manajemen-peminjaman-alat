@@ -1,10 +1,12 @@
 export type UserRole = 'admin' | 'petugas' | 'peminjam';
+export type UserStatus = "aktif" | "nonaktif";
 
 export interface User {
-    id: string;
+    id: number;
     nama: string;
     email: string;
     role: UserRole;
     phone: string;
-    createdAt: string;
+    is_active: UserStatus;
+    created_at: string;
 }

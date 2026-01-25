@@ -19,7 +19,7 @@ class UserSeeder extends Seeder
             'password' => bcrypt('Zad1d&teng'),
             'role' => 'admin',
             'phone' => '081234567890',
-            'is_active' => true,
+            'is_active' => 'aktif',
         ]);
 
         User::create([
@@ -28,7 +28,7 @@ class UserSeeder extends Seeder
             'password' => bcrypt('Sucipto123'),
             'role' => 'petugas',
             'phone' => '089876543210',
-            'is_active' => true,
+            'is_active' => 'aktif',
         ]);
 
         User::create([
@@ -37,7 +37,7 @@ class UserSeeder extends Seeder
             'password' => bcrypt('Hendro123'),
             'role' => 'peminjam',
             'phone' => '087654321098',
-            'is_active' => true,
+            'is_active' => 'aktif',
         ]);
     }
 }

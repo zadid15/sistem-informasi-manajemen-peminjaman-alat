@@ -18,12 +18,11 @@ return new class extends Migration
             $table->string('kode_alat');
             $table->string('deskripsi');
             $table->string('foto_alat');
-            $table->integer('jumlah_tersedia');
-            $table->integer('jumlah_dipinjam');
             $table->string('kondisi');
             $table->string('lokasi');
             $table->integer('harga');
             $table->integer('batas_peminjaman');
+            $table->string('status');
             $table->timestamps();
         });
     }

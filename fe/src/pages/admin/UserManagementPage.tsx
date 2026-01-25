@@ -8,25 +8,55 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Label } from "../../components/ui/label";
 import { ConfirmDialog } from "../../components/shared/ConfirmDialog";
-import type { User, UserRole } from "../../types/user";
-import { useState } from "react";
+import type { User, UserRole, UserStatus } from "../../types/user";
+import { useEffect, useState } from "react";
 import { toast } from 'sonner';
 import { Button } from "../../components/ui/button";
+import { createUser, deleteUser, getUsers, updateUser } from "../../services/userService";
+import { useSearchParams } from "react-router-dom";
 
 export default function UserManagementPage() {
     const [users, setUsers] = useState<User[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [roleFilter, setRoleFilter] = useState<string>('all');
     const [showAddModal, setShowAddModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const currentPage = Number(searchParams.get("page") || 1);
+    const searchQuery = searchParams.get("search") || "";
+    const roleFilter = searchParams.get("role") || "all";
+    const [pagination, setPagination] = useState<{ total: number; per_page: number; current_page: number; last_page: number; }>({ total: 0, per_page: 10, current_page: 1, last_page: 1 });
     const [formData, setFormData] = useState({
         nama: '',
         email: '',
+        password: '',
+        confirm_password: '',
         role: 'peminjam' as UserRole,
         phone: '',
+        is_active: 'true' as UserStatus,
     });
+
+    const fetchUsers = async (page = 1) => {
+        try {
+            const res = await getUsers(page, searchQuery, roleFilter);
+
+            setUsers(res.users);
+        } catch (error) {
+            console.error(error);
+            toast.error("Gagal mengambil data user");
+        }
+    };
+
+    useEffect(() => {
+        const loadUsers = async () => {
+            const res = await getUsers(currentPage, searchQuery, roleFilter);
+
+            setUsers(res.users);
+            setPagination(res.pagination);
+        };
+
+        loadUsers();
+    }, [currentPage, searchQuery, roleFilter]);
 
     const filteredUsers = users.filter((user) => {
         const matchesSearch =
@@ -36,33 +66,54 @@ export default function UserManagementPage() {
         return matchesSearch && matchesRole;
     });
 
-    const handleAdd = () => {
-        const newUser: User = {
-            id: `${users.length + 1}`,
-            ...formData,
-            createdAt: new Date().toISOString(),
-        };
-        setUsers([...users, newUser]);
-        setShowAddModal(false);
-        resetForm();
-        toast.success('User berhasil ditambahkan');
-    };
+    const handleAdd = async () => {
+        if (formData.password !== formData.confirm_password) {
+            toast.error("Password dan Confirm Password tidak sama");
+            return;
+        }
 
-    const handleEdit = () => {
-        if (selectedUser) {
-            setUsers(users.map((u) => (u.id === selectedUser.id ? { ...selectedUser, ...formData } : u)));
-            setShowEditModal(false);
-            setSelectedUser(null);
+        try {
+            await createUser(formData);
+            toast.success("User berhasil ditambahkan");
+            setShowAddModal(false);
             resetForm();
-            toast.success('User berhasil diperbarui');
+            fetchUsers(currentPage);
+        } catch {
+            toast.error("Gagal menambahkan user");
         }
     };
 
-    const handleDelete = () => {
-        if (selectedUser) {
-            setUsers(users.filter((u) => u.id !== selectedUser.id));
+    const handleEdit = async () => {
+        if (!selectedUser) return;
+
+        if (formData.password && formData.password !== formData.confirm_password) {
+            toast.error("Password dan Confirm Password tidak sama");
+            return;
+        }
+
+        try {
+            await updateUser(selectedUser.id, formData);
+            toast.success("User berhasil diperbarui");
+            setShowEditModal(false);
             setSelectedUser(null);
-            toast.success('User berhasil dihapus');
+            resetForm();
+            fetchUsers(currentPage);
+        } catch {
+            toast.error("Gagal memperbarui user");
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!selectedUser) return;
+
+        try {
+            await deleteUser(selectedUser.id);
+            toast.success("User berhasil dihapus");
+            setShowDeleteDialog(false);
+            setSelectedUser(null);
+            fetchUsers(currentPage);
+        } catch {
+            toast.error("Gagal menghapus user");
         }
     };
 
@@ -71,7 +122,10 @@ export default function UserManagementPage() {
             nama: '',
             email: '',
             role: 'peminjam',
+            password: '',
+            confirm_password: '',
             phone: '',
+            is_active: 'aktif',
         });
     };
 
@@ -82,6 +136,9 @@ export default function UserManagementPage() {
             email: user.email,
             role: user.role,
             phone: user.phone || '',
+            password: '',
+            confirm_password: '',
+            is_active: user.is_active,
         });
         setShowEditModal(true);
     };
@@ -103,6 +160,17 @@ export default function UserManagementPage() {
         peminjam: 'Peminjam',
     };
 
+    const statusColors = {
+        aktif: 'bg-green-100 text-green-800',
+        nonaktif: 'bg-red-100 text-red-800',
+    }
+
+
+    const statusLabels = {
+        aktif: 'Aktif',
+        nonaktif: 'Tidak Aktif',
+    };
+
     return (
         <div className="space-y-6">
             {/* Page Header */}
@@ -111,7 +179,11 @@ export default function UserManagementPage() {
                     <h1 className="text-2xl font-bold text-gray-900">Manajemen User</h1>
                     <p className="text-gray-600 mt-1">Kelola pengguna sistem</p>
                 </div>
-                <Button onClick={() => setShowAddModal(true)}>
+                <Button onClick={() => {
+                    resetForm();
+                    setSelectedUser(null);
+                    setShowAddModal(true);
+                }}>
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah User
                 </Button>
@@ -125,11 +197,26 @@ export default function UserManagementPage() {
                         <Input
                             placeholder="Cari nama atau email..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) =>
+                                setSearchParams({
+                                    page: "1",
+                                    search: e.target.value,
+                                    role: roleFilter,
+                                })
+                            }
                             className="pl-10"
                         />
                     </div>
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <Select
+                        value={roleFilter}
+                        onValueChange={(value) =>
+                            setSearchParams({
+                                page: "1",
+                                search: searchQuery,
+                                role: value,
+                            })
+                        }
+                    >
                         <SelectTrigger className="w-full md:w-48">
                             <SelectValue placeholder="Semua Role" />
                         </SelectTrigger>
@@ -161,6 +248,7 @@ export default function UserManagementPage() {
                                     <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Email</th>
                                     <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Role</th>
                                     <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">No. Telepon</th>
+                                    <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Status</th>
                                     <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Terdaftar</th>
                                     <th className="text-right py-3 px-6 text-sm font-semibold text-gray-700">Aksi</th>
                                 </tr>
@@ -181,8 +269,11 @@ export default function UserManagementPage() {
                                             <p className="text-sm text-gray-700">{user.phone || '-'}</p>
                                         </td>
                                         <td className="py-4 px-6">
+                                            <Badge className={statusColors[user.is_active]}>{statusLabels[user.is_active]}</Badge>
+                                        </td>
+                                        <td className="py-4 px-6">
                                             <p className="text-sm text-gray-700">
-                                                {new Date(user.createdAt).toLocaleDateString('id-ID', {
+                                                {new Date(user.created_at).toLocaleDateString('id-ID', {
                                                     day: 'numeric',
                                                     month: 'short',
                                                     year: 'numeric',
@@ -215,6 +306,71 @@ export default function UserManagementPage() {
                                 ))}
                             </tbody>
                         </table>
+                        <div className="flex flex-col md:flex-row items-center justify-between p-4 border-t border-gray-200 gap-3">
+
+                            {/* Info */}
+                            <p className="text-sm text-gray-600">
+                                Menampilkan {(pagination.current_page - 1) * pagination.per_page + 1}
+                                {" - "}
+                                {Math.min(pagination.current_page * pagination.per_page, pagination.total)}
+                                {" dari "}
+                                {pagination.total} data
+                            </p>
+
+                            {/* Pagination Controls */}
+                            <div className="flex items-center gap-1">
+
+                                {/* Prev */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={pagination.current_page === 1}
+                                    onClick={() =>
+                                        setSearchParams({
+                                            page: String(pagination.current_page - 1),
+                                            search: searchQuery,
+                                            role: roleFilter,
+                                        })
+                                    }
+                                >
+                                    Prev
+                                </Button>
+
+                                {/* Page Numbers */}
+                                {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
+                                    <Button
+                                        key={page}
+                                        size="sm"
+                                        variant={page === pagination.current_page ? "default" : "outline"}
+                                        onClick={() =>
+                                            setSearchParams({
+                                                page: String(page),
+                                                search: searchQuery,
+                                                role: roleFilter,
+                                            })
+                                        }
+                                    >
+                                        {page}
+                                    </Button>
+                                ))}
+
+                                {/* Next */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={pagination.current_page === pagination.last_page}
+                                    onClick={() =>
+                                        setSearchParams({
+                                            page: String(pagination.current_page + 1),
+                                            search: searchQuery,
+                                            role: roleFilter,
+                                        })
+                                    }
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
@@ -226,46 +382,70 @@ export default function UserManagementPage() {
                         <DialogTitle>Tambah User Baru</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                        <div>
-                            <Label htmlFor="name">Nama Lengkap</Label>
-                            <Input
-                                id="name"
-                                value={formData.nama}
-                                onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                                placeholder="Masukkan nama lengkap"
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <Label htmlFor="name" className="mb-2">Nama Lengkap</Label>
+                                <Input
+                                    id="name"
+                                    value={formData.nama}
+                                    onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                                    placeholder="Masukkan nama lengkap"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="email" className="mb-2">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    placeholder="user@example.com"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="password" className="mb-2">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    placeholder="user@example.com"
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                placeholder="user@example.com"
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="phone">No. Telepon</Label>
-                            <Input
-                                id="phone"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                placeholder="08xxxxxxxxxx"
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="role">Role</Label>
-                            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                    <SelectItem value="petugas">Petugas</SelectItem>
-                                    <SelectItem value="peminjam">Peminjam</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <Label htmlFor="confirm_password">Confirm Password</Label>
+                                <Input
+                                    id="confirm_password"
+                                    type="password"
+                                    value={formData.confirm_password}
+                                    onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
+                                    placeholder="Ulangi password"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="phone">No. Telepon</Label>
+                                <Input
+                                    id="phone"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    placeholder="08xxxxxxxxxx"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="role">Role</Label>
+                                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="admin">Admin</SelectItem>
+                                        <SelectItem value="petugas">Petugas</SelectItem>
+                                        <SelectItem value="peminjam">Peminjam</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>
@@ -302,6 +482,26 @@ export default function UserManagementPage() {
                             />
                         </div>
                         <div>
+                            <Label htmlFor="edit-password">Password</Label>
+                            <Input
+                                id="edit-password"
+                                type="password"
+                                placeholder="********"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="edit-confirm_password">Confirm Password</Label>
+                            <Input
+                                id="edit-confirm_password"
+                                type="password"
+                                placeholder="Ulangi password baru"
+                                value={formData.confirm_password}
+                                onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
+                            />
+                        </div>
+                        <div>
                             <Label htmlFor="edit-phone">No. Telepon</Label>
                             <Input
                                 id="edit-phone"
@@ -319,6 +519,18 @@ export default function UserManagementPage() {
                                     <SelectItem value="admin">Admin</SelectItem>
                                     <SelectItem value="petugas">Petugas</SelectItem>
                                     <SelectItem value="peminjam">Peminjam</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="edit-status">Status</Label>
+                            <Select value={formData.is_active} onValueChange={(value) => setFormData({ ...formData, is_active: value as UserStatus })}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="aktif">Aktif</SelectItem>
+                                    <SelectItem value="nonaktif">Nonaktif</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

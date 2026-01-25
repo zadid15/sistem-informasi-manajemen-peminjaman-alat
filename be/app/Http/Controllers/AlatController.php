@@ -31,9 +31,11 @@ class AlatController extends Controller
             'kode_alat',
             'deskripsi',
             'foto_alat',
-            'jumlah_tersedia',
-            'jumlah_dipinjam',
             'kondisi',
+            'lokasi',
+            'harga',
+            'batas_peminjaman',
+            'status',
             'id_kategori'
         );
 
@@ -53,9 +55,17 @@ class AlatController extends Controller
                 'kode_alat' => $alat->kode_alat,
                 'deskripsi' => $alat->deskripsi,
                 'foto_alat' => $alat->foto_alat,
-                'jumlah_tersedia' => $alat->jumlah_tersedia,
-                'jumlah_dipinjam' => $alat->jumlah_dipinjam,
                 'kondisi' => $alat->kondisi,
+                'lokasi' => $alat->lokasi,
+                'harga' => $alat->harga,
+                'batas_peminjaman' => $alat->batas_peminjaman,
+                'status' => $alat->status,
+
+                // 👇 TAMBAHAN
+                'kategori' => [
+                    'id' => $alat->kategori?->id,
+                    'nama_kategori' => $alat->kategori?->nama_kategori,
+                ],
             ];
         });
 
@@ -88,14 +98,13 @@ class AlatController extends Controller
             'nama_alat' => 'required|string|max:255',
             'kode_alat' => 'required|string|unique:alat,kode_alat',
             'deskripsi' => 'required|string',
-            'foto_alat' => 'required|image|max:2048',
-            'jumlah_tersedia' => 'required|integer|min:0',
-            'jumlah_dipinjam' => 'required|integer|min:0',
+            'foto_alat' => 'required|string',
             'kondisi' => 'required|string',
             'id_kategori' => 'required|exists:kategori,id',
             'harga' => 'required|integer|min:0',
             'lokasi' => 'required|string',
             'batas_peminjaman' => 'required|integer|min:0',
+            'status' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -124,13 +133,12 @@ class AlatController extends Controller
                 'kode_alat' => $alat->kode_alat,
                 'deskripsi' => $alat->deskripsi,
                 'foto_alat' => $alat->foto_alat,
-                'jumlah_tersedia' => $alat->jumlah_tersedia,
-                'jumlah_dipinjam' => $alat->jumlah_dipinjam,
                 'kondisi' => $alat->kondisi,
                 'id_kategori' => $alat->id_kategori,
                 'harga' => $alat->harga,
                 'lokasi' => $alat->lokasi,
                 'batas_peminjaman' => $alat->batas_peminjaman,
+                'status' => $alat->status,
             ]
         ]);
     }
@@ -170,13 +178,12 @@ class AlatController extends Controller
             'kode_alat' => 'sometimes|required|string|unique:alat,kode_alat,' . $id,
             'deskripsi' => 'sometimes|required|string',
             'foto_alat' => 'sometimes|required|string',
-            'jumlah_tersedia' => 'sometimes|required|integer|min:0',
-            'jumlah_dipinjam' => 'sometimes|required|integer|min:0',
             'kondisi' => 'sometimes|required|string',
             'id_kategori' => 'sometimes|required|exists:kategori,id',
             'harga' => 'sometimes|required|integer|min:0',
             'lokasi' => 'sometimes|required|string',
             'batas_peminjaman' => 'sometimes|required|integer|min:0',
+            'status' => 'sometimes|required|string',
         ]);
 
         $alat->update($data);

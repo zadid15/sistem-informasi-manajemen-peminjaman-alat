@@ -27,13 +27,14 @@ class UserController extends Controller
         // Ambil query parameter search
         $search = $request->query('search');
 
-        $query = User::select('id', 'nama', 'email', 'role', 'is_active', 'phone');
+        $query = User::select('id', 'nama', 'email', 'role', 'is_active', 'phone', 'created_at');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('nama', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('role', 'like', "%{$search}%");
+                    ->orWhere('role', 'like', "%{$search}%")
+                    ->orWhere('is_active', 'like', "%{$search}%");
             });
         }
 
@@ -46,6 +47,7 @@ class UserController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'is_active' => $user->is_active,
+                'created_at' => $user->created_at,
                 'phone' => $user->phone,
             ];
         });
@@ -158,13 +160,15 @@ class UserController extends Controller
         }
 
         $data = $request->validate([
-            'nama' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $id,
-            'password' => ['sometimes', 'required', 'string', 'min:8', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/'],
-            'role' => 'sometimes|required|string|in:admin,petugas,peminjam',
-            'phone' => 'sometimes|required|string',
+            'nama' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|max:255|unique:users,email,' . $id,
+            'password' => ['sometimes', 'string', 'min:8', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/'],
+            'role' => 'sometimes|string|in:admin,petugas,peminjam',
+            'phone' => 'sometimes|string',
+            'is_active' => 'sometimes|string|in:aktif,nonaktif',
         ]);
 
+        // hash password jika diisi
         if (isset($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         }

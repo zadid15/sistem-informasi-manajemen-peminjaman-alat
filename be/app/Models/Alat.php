@@ -14,12 +14,11 @@ class Alat extends Model
         'kode_alat',
         'deskripsi',
         'foto_alat',
-        'jumlah_tersedia',
-        'jumlah_dipinjam',
         'kondisi',
         'lokasi',
         'harga',
         'batas_peminjaman',
+        'status',
     ];
 
     public function kategori()
