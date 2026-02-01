@@ -1,23 +1,22 @@
 import { useState } from 'react';
-import { Search, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { Search, Settings, LogOut, ChevronDown, User } from 'lucide-react';
 
 interface TopbarProps {
     name: string;
+    avatar?: string | null;
     onNavigate: (page: string) => void;
 }
 
-export function Topbar({ name, onNavigate }: TopbarProps) {
+export function Topbar({ name, avatar, onNavigate }: TopbarProps) {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-    const currentUser = {
-        name: name,
-        avatar: 'https://i.pravatar.cc/150?img=3',
-    };
 
     const handleLogout = () => {
         localStorage.removeItem('user');
         window.location.href = '/login';
     };
+
+    console.log(avatar);
+    
 
     return (
         <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
@@ -39,16 +38,24 @@ export function Topbar({ name, onNavigate }: TopbarProps) {
                 <div className="relative">
                     <button
                         onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+                        className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                     >
-                        <img
-                            src={currentUser.avatar}
-                            alt="Avatar"
-                            className="w-9 h-9 rounded-full object-cover border border-gray-300"
-                        />
+                        {avatar ? (
+                            <img
+                                src={avatar}
+                                alt="Avatar"
+                                className="w-9 h-9 rounded-full object-cover border border-gray-300"
+                            />
+                        ) : (
+                            <div className="w-9 h-9 rounded-full border border-gray-300 flex items-center justify-center bg-gray-100">
+                                <User className="w-5 h-5 text-gray-500" />
+                            </div>
+                        )}
+
                         <span className="text-sm font-medium text-gray-700">
-                            {currentUser.name}
+                            {name}
                         </span>
+
                         <ChevronDown className="w-4 h-4 text-gray-500" />
                     </button>
 
@@ -62,12 +69,12 @@ export function Topbar({ name, onNavigate }: TopbarProps) {
                                 <button
                                     onClick={() => {
                                         setShowProfileMenu(false);
-                                        onNavigate('settings');
+                                        onNavigate('pengaturan');
                                     }}
-                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
                                 >
                                     <Settings className="w-4 h-4" />
-                                    Settings
+                                    Pengaturan
                                 </button>
 
                                 <button
@@ -76,7 +83,7 @@ export function Topbar({ name, onNavigate }: TopbarProps) {
                                         localStorage.clear();
                                         handleLogout();
                                     }}
-                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 text-red-600 cursor-pointer"
                                 >
                                     <LogOut className="w-4 h-4" />
                                     Logout

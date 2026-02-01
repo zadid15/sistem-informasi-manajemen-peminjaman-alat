@@ -28,15 +28,18 @@ import ReportManagementPage from './pages/petugas/ReportManagementPage'
 import ToolListPage from './pages/peminjam/ToolListPage'
 import MyBorrowingsPage from './pages/peminjam/MyBorrowingsPage'
 import { Toaster } from 'sonner'
+import SettingPage from './pages/SettingPage'
+import HomePage from './pages/HomePage'
 
 export default function App() {
   return (
     <>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
 
           <Route element={<PublicRoute />}>
+            <Route path="/home" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
           </Route>
@@ -45,6 +48,7 @@ export default function App() {
           <Route path="/admin" element={<PrivateRoute requiredRole="admin" />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<LayoutWrapper><AdminDashboardPage /></LayoutWrapper>} />
+            <Route path="pengaturan" element={<LayoutWrapper><SettingPage /></LayoutWrapper>} />
             <Route path="manajemen-user" element={<LayoutWrapper><UserManagementPage /></LayoutWrapper>} />
             <Route path="manajemen-alat" element={<LayoutWrapper><ToolManagementPage /></LayoutWrapper>} />
             <Route path="manajemen-kategori" element={<LayoutWrapper><CategoryManagementPage /></LayoutWrapper>} />

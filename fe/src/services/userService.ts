@@ -11,15 +11,14 @@ export const getUsers = async (
     });
 
     console.log(res.data.data);
-    
+
 
     return {
-        users: res.data.data as User[],        
-        pagination: res.data.pagination,       
+        users: res.data.data as User[],
+        pagination: res.data.pagination,
         message: res.data.message,
     };
 };
-
 
 export const createUser = async (data: Partial<User>) => {
     const res = await axiosInstance.post("/users", data);
@@ -33,5 +32,31 @@ export const updateUser = async (id: number, data: Partial<User>) => {
 
 export const deleteUser = async (id: number) => {
     const res = await axiosInstance.delete(`/users/${id}`);
+    return res.data;
+};
+
+// 🔹 USER LOGIN
+export const getMe = async () => {
+    const res = await axiosInstance.get("/me");
+    return res.data.data as User;
+};
+
+// 🔹 UPDATE PROFIL SENDIRI
+export const updateMe = async (data: FormData) => {
+    const res = await axiosInstance.post("/me", data, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+    return res.data;
+};
+
+// 🔹 GANTI PASSWORD
+export const changePassword = async (data: {
+    current_password: string;
+    new_password: string;
+    new_password_confirmation: string;
+}) => {
+    const res = await axiosInstance.put("/me/password", data);
     return res.data;
 };

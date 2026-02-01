@@ -11,22 +11,30 @@ export const getKategori = async (
     });
 
     console.log(res.data.data);
-    
+
 
     return {
-        kategori: res.data.data as Kategori[],        
-        pagination: res.data.pagination,       
+        kategori: res.data.data as Kategori[],
+        pagination: res.data.pagination,
         message: res.data.message,
     };
 };
 
-export const createKategori = async (data: Partial<Kategori>) => {
-    const res = await axiosInstance.post("/kategori", data);
+export const createKategori = async (data: FormData) => {
+    const res = await axiosInstance.post("/kategori", data, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
     return res.data;
 };
 
-export const updateKategori = async (id: number, data: Partial<Kategori>) => {
-    const res = await axiosInstance.put(`/kategori/${id}`, data);
+export const updateKategori = async (id: number, data: FormData) => {
+    const res = await axiosInstance.put(`/kategori/${id}`, data, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
     return res.data;
 };
 

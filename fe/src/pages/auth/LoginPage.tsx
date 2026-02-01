@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axios";
 import auth from "../../assets/auth.jpg";
-import simpa from "../../assets/simpa.png";
+import simpa from "../../assets/simpa-login.png";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
@@ -11,6 +11,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const navigate = useNavigate();
 
@@ -27,6 +28,7 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setErrorMessage("");
 
         try {
             const response = await axiosInstance.post("/login", {
@@ -60,8 +62,14 @@ export default function LoginPage() {
                 default:
                     navigate("/");
             }
-        } catch (error) {
-            console.error("Login failed:", error);
+        } catch (error: unknown) {
+            const err = error as { response?: { status?: number } };
+
+            if (err.response?.status === 401) {
+                setErrorMessage("Email atau password anda salah");
+            } else {
+                setErrorMessage("Terjadi kesalahan, silakan coba lagi");
+            }
         } finally {
             setLoading(false);
         }
@@ -79,6 +87,11 @@ export default function LoginPage() {
                     </p>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {errorMessage && (
+                            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                {errorMessage}
+                            </p>
+                        )}
                         <div>
                             <label className="block text-md mb-1">Email</label>
                             <input
@@ -104,7 +117,7 @@ export default function LoginPage() {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-[38px] text-gray-500"
+                                className="absolute right-3 top-[38px] text-gray-500 cursor-pointer"
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
@@ -122,7 +135,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors"
+                            className="w-full bg-gray-600 text-white py-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors"
                         >
                             {loading ? "Masuk" : "Masuk"}
                         </button>

@@ -7,6 +7,7 @@ interface MainLayoutProps {
     name: string;
     role: UserRole;
     currentPage: string;
+    avatar?: string | null;
     onNavigate: (page: string) => void;
     children: ReactNode;
 }
@@ -15,15 +16,16 @@ export default function MainLayout({
     name,
     role,
     currentPage,
+    avatar,
     onNavigate,
     children,
 }: MainLayoutProps) {
     return (
         <div className="flex h-screen bg-gray-50">
-            <Sidebar name={name} role={role} currentPage={currentPage} onNavigate={onNavigate} />
+            <Sidebar name={name} role={role} avatar={avatar} currentPage={currentPage} onNavigate={onNavigate} />
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <Topbar name={name} onNavigate={onNavigate} />
+                <Topbar name={name} avatar={avatar} onNavigate={onNavigate} />
 
                 <main className="flex-1 overflow-y-auto">
                     <div className="p-6">{children}</div>

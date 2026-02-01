@@ -64,7 +64,7 @@ export function ConfirmDialog({
                     </div>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={onClose}>{cancelText}</AlertDialogCancel>
+                    <AlertDialogCancel onClick={onClose} className='cursor-pointer'>{cancelText}</AlertDialogCancel>
                     <AlertDialogAction
                         onClick={() => {
                             onConfirm();
@@ -72,11 +72,11 @@ export function ConfirmDialog({
                         }}
                         className={
                             variant === 'danger'
-                                ? 'bg-red-600 hover:bg-red-700'
+                                ? 'bg-red-600 hover:bg-red-700 cursor-pointer'
                                 : variant === 'warning'
-                                    ? 'bg-yellow-600 hover:bg-yellow-700'
+                                    ? 'bg-yellow-600 hover:bg-yellow-700 cursor-pointer'
                                     : variant === 'success'
-                                        ? 'bg-green-600 hover:bg-green-700'
+                                        ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
                                         : ''
                         }
                     >

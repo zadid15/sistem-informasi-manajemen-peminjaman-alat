@@ -11,7 +11,8 @@ import {
     Eye,
     FileBarChart,
     List,
-    UserCircle,
+    User,
+    // UserCircle,
 } from 'lucide-react';
 import type { UserRole } from '../types/user';
 import simpa from '../assets/simpa.png';
@@ -25,6 +26,7 @@ interface MenuItem {
 interface SidebarProps {
     name: string;
     role: UserRole;
+    avatar?: string | null;
     currentPage: string;
     onNavigate: (page: string) => void;
 }
@@ -53,15 +55,21 @@ const menuItems: Record<UserRole, MenuItem[]> = {
     ],
 };
 
-export function Sidebar({ name, role, currentPage, onNavigate }: SidebarProps) {
+export function Sidebar({
+    name,
+    role,
+    avatar,
+    currentPage,
+    onNavigate
+}: SidebarProps) {
     const items = menuItems[role];
 
     return (
-        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
+        <aside className="w-64 bg-gray-600 border-r border-gray-600 flex flex-col h-screen sticky top-0">
             {/* Logo */}
-            <div className="p-6 border-b border-gray-200 flex justify-center">
+            <div className="p-6 border-b border-gray-500 flex justify-center">
                 <div className="rounded-lg flex items-center justify-center overflow-hidden">
-                    <img src={simpa} alt="Logo" className="w-24 h-24 object-contain" />
+                    <img src={simpa} alt="Logo" className="w-30 h-30 object-contain" />
                 </div>
             </div>
 
@@ -76,9 +84,9 @@ export function Sidebar({ name, role, currentPage, onNavigate }: SidebarProps) {
                             <li key={item.path}>
                                 <button
                                     onClick={() => onNavigate(item.path)}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive
-                                        ? 'bg-blue-50 text-blue-700'
-                                        : 'text-gray-700 hover:bg-gray-50'
+                                    className={`cursor-pointer w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive
+                                        ? 'bg-gray-50 text-gray-700'
+                                        : 'text-gray-100 hover:bg-gray-50 hover:text-gray-700'
                                         }`}
                                 >
                                     <Icon className="w-5 h-5" />
@@ -91,16 +99,24 @@ export function Sidebar({ name, role, currentPage, onNavigate }: SidebarProps) {
             </nav>
 
             {/* User Profile */}
-            <div className="p-4 border-t border-gray-200">
+            <div className="p-4 border-t border-gray-500">
                 <div className="flex items-center gap-3 px-3 py-2">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                        <UserCircle className="w-6 h-6 text-gray-600" />
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                        {avatar ? (
+                            <img
+                                src={avatar}
+                                alt="Avatar"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <User className="w-6 h-6 text-gray-500" />
+                        )}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-gray-100 truncate">
                             {name}
                         </p>
-                        <p className="text-xs text-gray-500 capitalize">{role}</p>
+                        <p className="text-xs text-gray-100 capitalize">{role}</p>
                     </div>
                 </div>
             </div>

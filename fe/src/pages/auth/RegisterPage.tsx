@@ -2,44 +2,81 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axios";
 import auth from "../../assets/auth.jpg";
-import simpa from "../../assets/simpa.png";
+import simpa from "../../assets/simpa-login.png";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
-    const [name, setName] = useState("");
+    const [nama, setNama] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [agree, setAgree] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [emailError, setEmailError] = useState("");
 
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSubmitted(true);
+        setEmailError("");
 
-        if (password !== confirmPassword) {
-            alert("Password dan konfirmasi password tidak sama.");
-            return;
-        }
+        if (!isPasswordValid || !isPasswordMatch) return;
 
         setLoading(true);
 
         try {
+            // 1️⃣ cek email dulu
+            const check = await axiosInstance.post("/check-email", { email });
+
+            console.log(check);
+
+
+            if (check.data.exists) {
+                setEmailError("Email sudah terdaftar");
+                setLoading(false);
+                return;
+            }
+
+            // 2️⃣ lanjut register
             await axiosInstance.post("/register", {
-                name,
+                nama,
                 email,
                 password,
             });
 
             navigate("/login");
         } catch (error) {
-            console.error("Register failed:", error);
+            console.error(error);
         } finally {
             setLoading(false);
         }
     };
+
+
+    console.log("Error email:", emailError);
+
+
+    const passwordRules = {
+        length: (p: string) => p.length >= 8,
+        uppercase: (p: string) => /[A-Z]/.test(p),
+        lowercase: (p: string) => /[a-z]/.test(p),
+        number: (p: string) => /[0-9]/.test(p),
+    };
+
+    const isPasswordValid =
+        passwordRules.length(password) &&
+        passwordRules.uppercase(password) &&
+        passwordRules.lowercase(password) &&
+        passwordRules.number(password);
+
+    const isPasswordMatch =
+        password.length > 0 &&
+        confirmPassword.length > 0 &&
+        password === confirmPassword;
 
     return (
         <div className="h-screen flex">
@@ -57,10 +94,10 @@ export default function RegisterPage() {
                             <label className="block text-md mb-1">Nama Lengkap</label>
                             <input
                                 type="text"
-                                placeholder="Nama lengkap"
+                                placeholder="Masukkan Nama Lengkap"
                                 className="w-full border border-gray-400 rounded-lg px-4 py-2"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
+                                value={nama}
+                                onChange={(e) => setNama(e.target.value)}
                                 required
                             />
                         </div>
@@ -69,12 +106,19 @@ export default function RegisterPage() {
                             <label className="block text-md mb-1">Email</label>
                             <input
                                 type="email"
-                                placeholder="contoh@gmail.com"
-                                className="w-full border border-gray-400 rounded-lg px-4 py-2"
+                                placeholder="Masukkan Email"
+                                className={`w-full border rounded-lg px-4 py-2 ${emailError ? "border-red-500" : "border-gray-400"
+                                    }`}
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                onChange={(e) => {
+                                    setEmail(e.target.value);
+                                    setEmailError("");
+                                }}
                                 required
                             />
+                            {emailError && (
+                                <p className="mt-1 text-xs text-red-600">{emailError}</p>
+                            )}
                         </div>
 
                         <div className="relative">
@@ -94,18 +138,35 @@ export default function RegisterPage() {
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
+                            {submitted && !isPasswordValid && (
+                                <p className="mt-1 text-xs text-red-600">
+                                    Password harus minimal 8 karakter dan mengandung huruf besar, huruf kecil, dan angka.
+                                </p>
+                            )}
                         </div>
 
-                        <div>
+                        <div className="relative">
                             <label className="block text-md mb-1">Konfirmasi Password</label>
                             <input
-                                type="password"
+                                type={showConfirmPassword ? "text" : "password"}
                                 placeholder="********"
-                                className="w-full border border-gray-400 rounded-lg px-4 py-2"
-                                value={confirmPassword}
+                                className="w-full border border-gray-400 rounded-lg px-4 py-2 pr-10"
+                                value={confirmPassword}   // ✅ BENAR
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute right-3 top-[38px] text-gray-500"
+                            >
+                                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                            {submitted && !isPasswordMatch && (
+                                <p className="mt-1 text-xs text-red-600">
+                                    Password dan konfirmasi password tidak sama
+                                </p>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -125,7 +186,9 @@ export default function RegisterPage() {
                         <button
                             type="submit"
                             disabled={loading || !agree}
-                            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                            className={`w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition
+        ${agree && !loading ? "cursor-pointer" : "cursor-not-allowed opacity-50"}
+    `}
                         >
                             {loading ? "Daftar" : "Daftar"}
                         </button>
