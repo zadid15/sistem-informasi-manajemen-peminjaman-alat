@@ -6,6 +6,7 @@ use App\Models\Kategori;
 use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 
 class KategoriController extends Controller
 {
@@ -25,12 +26,11 @@ class KategoriController extends Controller
         // Ambil query parameter search
         $search = $request->query('search');
 
-        $query = Kategori::select('id', 'nama_kategori', 'deskripsi', 'foto_kategori');
+        // Ambil kategori + hitung jumlah alat
+        $query = Kategori::withCount('alat')->select('id', 'nama_kategori', 'deskripsi', 'foto_kategori');
 
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('nama_kategori', 'like', "%{$search}%");
-            });
+            $query->where('nama_kategori', 'like', "%{$search}%");
         }
 
         $kategori = $query->paginate(10);
@@ -40,7 +40,10 @@ class KategoriController extends Controller
                 'id' => $kategori->id,
                 'nama_kategori' => $kategori->nama_kategori,
                 'deskripsi' => $kategori->deskripsi,
-                'foto_kategori' => $kategori->foto_kategori,
+                'foto_kategori' => $kategori->foto_kategori
+                    ? asset('storage/' . $kategori->foto_kategori)
+                    : null,
+                'jumlah_alat' => $kategori->alat->count(),
             ];
         });
 
@@ -72,7 +75,7 @@ class KategoriController extends Controller
         $validator = Validator::make($request->all(), [
             'nama_kategori' => 'required|string|unique:kategori,nama_kategori',
             'deskripsi' => 'nullable|string',
-            'foto_kategori' => 'nullable|string',
+            'foto_kategori' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -83,6 +86,14 @@ class KategoriController extends Controller
         }
 
         $data = $validator->validated();
+
+        if ($request->hasFile('foto_kategori')) {
+            $file = $request->file('foto_kategori');
+            $filename = uniqid('kategori_') . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('kategori', $filename, 'public');
+
+            $data['foto_kategori'] = $path;
+        }
 
         $kategori = Kategori::create($data);
 
@@ -151,8 +162,21 @@ class KategoriController extends Controller
         $data = $request->validate([
             'nama_kategori' => 'sometimes|required|string|unique:kategori,nama_kategori,' . $id,
             'deskripsi' => 'sometimes|required|string',
-            'foto_kategori' => 'sometimes|required|string',
+            'foto_kategori' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
+
+        if ($request->hasFile('foto_kategori')) {
+            // hapus foto lama
+            if ($kategori->foto_kategori && Storage::disk('public')->exists($kategori->foto_kategori)) {
+                Storage::disk('public')->delete($kategori->foto_kategori);
+            }
+
+            $file = $request->file('foto_kategori');
+            $filename = uniqid('kategori_') . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('kategori', $filename, 'public');
+
+            $data['foto_kategori'] = $path;
+        }
 
         $kategori->update($data);
 

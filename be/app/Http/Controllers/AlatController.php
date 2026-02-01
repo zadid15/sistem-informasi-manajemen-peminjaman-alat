@@ -6,6 +6,7 @@ use App\Models\Alat;
 use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 
 class AlatController extends Controller
 {
@@ -22,8 +23,9 @@ class AlatController extends Controller
             ], 403);
         }
 
-        // Ambil query parameter search
-        $search = $request->query('search');
+        $search   = $request->query('search');
+        $category = $request->query('category');
+        $status   = $request->query('status');
 
         $query = Alat::with('kategori')->select(
             'id',
@@ -46,6 +48,16 @@ class AlatController extends Controller
             });
         }
 
+        if ($category && $category !== 'all') {
+            $query->whereHas('kategori', function ($q) use ($category) {
+                $q->where('nama_kategori', $category);
+            });
+        }
+
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
         $alat = $query->paginate(10);
 
         $alat->getCollection()->transform(function ($alat) {
@@ -54,14 +66,14 @@ class AlatController extends Controller
                 'nama_alat' => $alat->nama_alat,
                 'kode_alat' => $alat->kode_alat,
                 'deskripsi' => $alat->deskripsi,
-                'foto_alat' => $alat->foto_alat,
+                'foto_alat' => $alat->foto_alat
+                    ? asset('storage/' . $alat->foto_alat)
+                    : null,
                 'kondisi' => $alat->kondisi,
                 'lokasi' => $alat->lokasi,
                 'harga' => $alat->harga,
                 'batas_peminjaman' => $alat->batas_peminjaman,
                 'status' => $alat->status,
-
-                // 👇 TAMBAHAN
                 'kategori' => [
                     'id' => $alat->kategori?->id,
                     'nama_kategori' => $alat->kategori?->nama_kategori,
@@ -98,7 +110,7 @@ class AlatController extends Controller
             'nama_alat' => 'required|string|max:255',
             'kode_alat' => 'required|string|unique:alat,kode_alat',
             'deskripsi' => 'required|string',
-            'foto_alat' => 'required|string',
+            'foto_alat' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'kondisi' => 'required|string',
             'id_kategori' => 'required|exists:kategori,id',
             'harga' => 'required|integer|min:0',
@@ -116,6 +128,15 @@ class AlatController extends Controller
 
         $data = $validator->validated();
 
+        // 📸 Upload foto
+        if ($request->hasFile('foto_alat')) {
+            $file = $request->file('foto_alat');
+            $filename = uniqid('alat_') . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('alat', $filename, 'public');
+
+            $data['foto_alat'] = $path; // simpan: alat/alat_xxx.jpg
+        }
+
         $alat = Alat::create($data);
 
         Log::create([
@@ -132,7 +153,9 @@ class AlatController extends Controller
                 'nama_alat' => $alat->nama_alat,
                 'kode_alat' => $alat->kode_alat,
                 'deskripsi' => $alat->deskripsi,
-                'foto_alat' => $alat->foto_alat,
+                'foto_alat' => $alat->foto_alat
+                    ? asset('storage/' . $alat->foto_alat)
+                    : null,
                 'kondisi' => $alat->kondisi,
                 'id_kategori' => $alat->id_kategori,
                 'harga' => $alat->harga,
@@ -177,7 +200,7 @@ class AlatController extends Controller
             'nama_alat' => 'sometimes|required|string|max:255',
             'kode_alat' => 'sometimes|required|string|unique:alat,kode_alat,' . $id,
             'deskripsi' => 'sometimes|required|string',
-            'foto_alat' => 'sometimes|required|string',
+            'foto_alat' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'kondisi' => 'sometimes|required|string',
             'id_kategori' => 'sometimes|required|exists:kategori,id',
             'harga' => 'sometimes|required|integer|min:0',
@@ -185,6 +208,20 @@ class AlatController extends Controller
             'batas_peminjaman' => 'sometimes|required|integer|min:0',
             'status' => 'sometimes|required|string',
         ]);
+
+        // 📸 Jika upload foto baru
+        if ($request->hasFile('foto_alat')) {
+            // hapus foto lama
+            if ($alat->foto_alat && Storage::disk('public')->exists($alat->foto_alat)) {
+                Storage::disk('public')->delete($alat->foto_alat);
+            }
+
+            $file = $request->file('foto_alat');
+            $filename = uniqid('alat_') . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('alat', $filename, 'public');
+
+            $data['foto_alat'] = $path;
+        }
 
         $alat->update($data);
 
@@ -197,7 +234,21 @@ class AlatController extends Controller
 
         return response()->json([
             'message' => 'Alat berhasil diperbarui',
-            'data' => $alat
+            'data' => [
+                'id' => $alat->id,
+                'nama_alat' => $alat->nama_alat,
+                'kode_alat' => $alat->kode_alat,
+                'deskripsi' => $alat->deskripsi,
+                'foto_alat' => $alat->foto_alat
+                    ? asset('storage/' . $alat->foto_alat)
+                    : null,
+                'kondisi' => $alat->kondisi,
+                'id_kategori' => $alat->id_kategori,
+                'harga' => $alat->harga,
+                'lokasi' => $alat->lokasi,
+                'batas_peminjaman' => $alat->batas_peminjaman,
+                'status' => $alat->status,
+            ]
         ]);
     }
 

@@ -19,7 +19,10 @@ return new class extends Migration
             $table->string('password');
             $table->enum('role', ['admin', 'petugas', 'peminjam'])->default('peminjam');
             $table->string('is_active')->default('aktif');
-            $table->string('phone');
+            $table->string('phone')->nullable();
+            $table->string('foto')->nullable();
+            $table->string('alamat')->nullable();
+            $table->string('jenis_kelamin')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

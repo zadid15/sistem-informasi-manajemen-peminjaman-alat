@@ -19,6 +19,8 @@ class UserSeeder extends Seeder
             'password' => bcrypt('Zad1d&teng'),
             'role' => 'admin',
             'phone' => '081234567890',
+            'jenis_kelamin' => 'Laki-laki',
+            'alamat' => 'Jl. Raya, Jakarta',
             'is_active' => 'aktif',
         ]);
 
@@ -28,6 +30,8 @@ class UserSeeder extends Seeder
             'password' => bcrypt('Sucipto123'),
             'role' => 'petugas',
             'phone' => '089876543210',
+            'jenis_kelamin' => 'Laki-laki',
+            'alamat' => 'Jl. Raya, Jakarta',
             'is_active' => 'aktif',
         ]);
 
@@ -37,6 +41,8 @@ class UserSeeder extends Seeder
             'password' => bcrypt('Hendro123'),
             'role' => 'peminjam',
             'phone' => '087654321098',
+            'jenis_kelamin' => 'Laki-laki',
+            'alamat' => 'Jl. Raya, Jakarta',
             'is_active' => 'aktif',
         ]);
     }

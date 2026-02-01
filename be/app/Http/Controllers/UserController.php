@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Log;
 use App\Models\User;
-use App\Models\UserLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -95,6 +95,14 @@ class UserController extends Controller
         $data = $validator->validated();
         $data['password'] = Hash::make($data['password']);
 
+        if ($request->hasFile('foto')) {
+            $file = $request->file('foto');
+            $filename = uniqid('user_') . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('user', $filename, 'public');
+
+            $data['foto'] = $path;
+        }
+
         $user = User::create($data);
 
         Log::create([
@@ -171,6 +179,18 @@ class UserController extends Controller
         // hash password jika diisi
         if (isset($data['password'])) {
             $data['password'] = Hash::make($data['password']);
+        }
+
+        if ($request->hasFile('foto')) {
+            if ($user->foto && Storage::disk('public')->exists($user->foto)) {
+                Storage::disk('public')->delete($user->foto);
+            }
+
+            $file = $request->file('foto');
+            $filename = uniqid('user_') . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('user', $filename, 'public');
+
+            $data['foto'] = $path;
         }
 
         $user->update($data);

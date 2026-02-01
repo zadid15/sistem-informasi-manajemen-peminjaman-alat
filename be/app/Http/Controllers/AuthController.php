@@ -9,6 +9,33 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    public function register(Request $request)
+    {
+        $validated = $request->validate([
+            'nama' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:8',
+        ]);
+
+        $user = User::create([
+            'nama' => $validated['nama'], 
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role' => 'peminjam', 
+        ]);
+
+        Log::create([
+            'user_id' => $user->id,
+            'aktor' => '-',
+            'aktivitas' => 'register',
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json([
+            'message' => 'Registrasi berhasil'
+        ], 201);
+    }
+
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -62,5 +89,18 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Token tidak valid'
         ], 401);
+    }
+
+    public function checkEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $exists = User::where('email', $request->email)->exists();
+
+        return response()->json([
+            'exists' => $exists
+        ]);
     }
 }

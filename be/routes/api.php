@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LogController;
+use App\Http\Controllers\MeController;
 use App\Http\Controllers\PeminjamanController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -14,8 +15,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // Authentication routes
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+Route::post('/check-email', [AuthController::class, 'checkEmail']);
 
 // Log routes
 Route::get('/logs', [LogController::class, 'index'])->middleware('auth:sanctum');
@@ -34,6 +37,13 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 // Peminjaman routes
 Route::middleware('auth:sanctum')->group(function () {
+
+    // =====================
+    // ME
+    // =====================
+    Route::get('/me', [MeController::class, 'me']);
+    Route::put('/me', [MeController::class, 'update']);
+    Route::put('/me/password', [MeController::class, 'changePassword']);
 
     // =====================
     // PEMINJAM
