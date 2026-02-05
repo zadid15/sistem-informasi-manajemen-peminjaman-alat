@@ -10,15 +10,24 @@ export const getKategori = async (
         params: { page, search, role },
     });
 
-    console.log(res.data.data);
-
-
     return {
         kategori: res.data.data as Kategori[],
         pagination: res.data.pagination,
         message: res.data.message,
     };
 };
+
+export const getListKategori = async (search = "") => {
+    const res = await axiosInstance.get("/list-kategori", {
+        params: { search },
+    });
+
+    return {
+        kategori: res.data.data as Pick<Kategori, "id" | "nama_kategori">[],
+        message: res.data.message,
+    };
+};
+
 
 export const createKategori = async (data: FormData) => {
     const res = await axiosInstance.post("/kategori", data, {

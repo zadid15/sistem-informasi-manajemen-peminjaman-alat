@@ -82,7 +82,6 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'string', 'min:8', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/'],
             'role' => 'required|string|in:admin,petugas,peminjam',
-            'phone' => 'required|string',
         ]);
 
         if ($validator->fails()) {

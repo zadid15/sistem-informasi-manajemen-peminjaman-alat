@@ -19,6 +19,11 @@ class Alat extends Model
         'harga',
         'batas_peminjaman',
         'status',
+        'spesifikasi',
+    ];
+
+    protected $casts = [
+        'spesifikasi' => 'array'
     ];
 
     public function kategori()

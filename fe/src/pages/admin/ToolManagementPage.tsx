@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Box, Edit, Eye, MoreVertical, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Box, Edit, Eye, MoreVertical, Plus, PlusIcon, Search, Trash, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -35,6 +35,7 @@ import { Badge } from "../../components/ui/badge";
 import placeholderImg from '../../assets/placeholder.jpg';
 import type { Kategori } from "../../types/kategori";
 import { getKategori } from "../../services/kategoriService";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 
 export default function ToolManagementPage() {
     const [alat, setAlat] = useState<Alat[]>([]);
@@ -44,6 +45,9 @@ export default function ToolManagementPage() {
         current_page: 1,
         last_page: 1,
     });
+
+    console.log(alat);
+
 
     const [searchParams, setSearchParams] = useSearchParams();
     const currentPage = Number(searchParams.get("page") || 1);
@@ -72,6 +76,9 @@ export default function ToolManagementPage() {
         status: "",
         deskripsi: "",
         foto_alat: null,
+        spesifikasi: [
+            { name: "", value: "" },
+        ],
     });
 
     const InfoItem = ({
@@ -182,9 +189,14 @@ export default function ToolManagementPage() {
         }
 
         try {
+            const spesifikasiArray = formData.spesifikasi.filter(
+                (item) => item.name.trim() !== "" && item.value.trim() !== ""
+            );
+
             // Gunakan createAlat versi FormData
             await createAlat({
                 ...formData,
+                spesifikasi: spesifikasiArray,
                 kondisi: formData.kondisi || undefined,
                 status: formData.status || undefined,
             });
@@ -248,6 +260,9 @@ export default function ToolManagementPage() {
             status: "",
             deskripsi: "",
             foto_alat: null,
+            spesifikasi: [
+                { name: "", value: "" },
+            ],
         });
     };
 
@@ -300,7 +315,7 @@ export default function ToolManagementPage() {
                     setSelectedAlat(null);
                     setShowAddModal(true);
                 }}
-                className="cursor-pointer"
+                    className="cursor-pointer"
                 >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Alat
@@ -502,6 +517,13 @@ export default function ToolManagementPage() {
                                                                 status: item.status,
                                                                 deskripsi: item.deskripsi,
                                                                 foto_alat: item.foto_alat,
+                                                                spesifikasi:
+                                                                    item.spesifikasi && Object.keys(item.spesifikasi).length > 0
+                                                                        ? Object.entries(item.spesifikasi).map(([key, value]) => ({
+                                                                            name: key,
+                                                                            value: String(value),
+                                                                        }))
+                                                                        : [{ name: "", value: "" }],
                                                             });
                                                             setShowEditModal(true);
                                                         }}
@@ -602,192 +624,271 @@ export default function ToolManagementPage() {
 
             {/* Add Modal */}
             <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle>Tambah Alat</DialogTitle>
                     </DialogHeader>
-                    <div className="grid grid-cols-4 gap-4">
-                        {/* Foto */}
-                        <div className="col-span-4">
-                            <Label>Foto Alat</Label>
-                            <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) =>
-                                    setFormData({
-                                        ...formData,
-                                        foto_alat: e.target.files?.[0] || null,
-                                    })
-                                }
-                            />
-                            {previewFoto && (
-                                <img
-                                    src={previewFoto}
-                                    alt="Preview"
-                                    className="mt-2 w-full max-h-48 object-contain rounded border"
+
+                    {/* TABS */}
+                    <Tabs defaultValue="utama" className="flex-1 flex flex-col">
+                        <TabsList className="grid grid-cols-4 w-full">
+                            <TabsTrigger value="media" className="cursor-pointer hover:bg-gray-300 hover:text-gray-900">Media</TabsTrigger>
+                            <TabsTrigger value="utama" className="cursor-pointer hover:bg-gray-300 hover:text-gray-900">Informasi Utama</TabsTrigger>
+                            <TabsTrigger value="spesifikasi" className="cursor-pointer hover:bg-gray-300 hover:text-gray-900">Spesifikasi</TabsTrigger>
+                            <TabsTrigger value="deskripsi" className="cursor-pointer hover:bg-gray-300 hover:text-gray-900">Deskripsi</TabsTrigger>
+                        </TabsList>
+
+                        {/* SCROLL AREA */}
+                        <div className="flex-1 overflow-y-auto mt-4">
+                            {/* ================= MEDIA ================= */}
+                            <TabsContent value="media">
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label>Foto Alat</Label>
+                                        <Input
+                                            type="file"
+                                            className="cursor-pointer"
+                                            accept="image/*"
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    foto_alat: e.target.files?.[0] || null,
+                                                })
+                                            }
+                                        />
+                                    </div>
+
+                                    {previewFoto && (
+                                        <img
+                                            src={previewFoto}
+                                            alt="Preview"
+                                            className="w-full max-h-64 object-contain rounded border"
+                                        />
+                                    )}
+                                </div>
+                            </TabsContent>
+
+                            {/* ================= INFORMASI UTAMA ================= */}
+                            <TabsContent value="utama">
+                                <div className="grid grid-cols-6 gap-4">
+                                    <div className="col-span-6">
+                                        <Label>Nama Alat</Label>
+                                        <Input
+                                            className="focus-visible:ring-0"
+                                            placeholder="Contoh: Kamera"
+                                            value={formData.nama_alat}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, nama_alat: e.target.value })
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <Label>Kode Alat</Label>
+                                        <Input
+                                            placeholder="Contoh: K001"
+                                            className="focus-visible:ring-0"
+                                            value={formData.kode_alat}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, kode_alat: e.target.value })
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <Label>Harga</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2">Rp</span>
+                                            <Input
+                                                className="focus-visible:ring-0 pl-10"
+                                                value={formData.harga ? formatRupiah(formData.harga) : ""}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        harga: e.target.value.replace(/\D/g, ""),
+                                                    })
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <Label>Kategori</Label>
+                                        <Select
+                                            value={formData.id_kategori ? String(formData.id_kategori) : undefined}
+                                            onValueChange={(v) =>
+                                                setFormData({ ...formData, id_kategori: Number(v) })
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih kategori" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {kategoriList.map((k) => (
+                                                    <SelectItem key={k.id} value={String(k.id)}>
+                                                        {k.nama_kategori}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <Label>Batas Peminjaman</Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="text"
+                                                min={1}
+                                                value={formData.batas_peminjaman || ""}
+                                                onChange={(e) => {
+                                                    const value = Number(e.target.value);
+                                                    setFormData({ ...formData, batas_peminjaman: value < 1 ? 1 : value, });
+                                                }}
+                                                className="focus-visible:ring-0"
+                                                placeholder="1" />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"> hari </span>
+                                        </div>
+                                    </div>
+
+                                    < div className="col-span-3" >
+                                        <Label>Kondisi</Label>
+                                        <Select
+                                            value={formData.kondisi}
+                                            onValueChange={(value) => setFormData({
+                                                ...formData, kondisi: value as KondisiAlat
+                                            })} >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih kondisi" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="baik">Baik</SelectItem>
+                                                <SelectItem value="rusak-ringan">Rusak Ringan</SelectItem>
+                                                <SelectItem value="rusak-berat">Rusak Berat</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <Label>Status</Label>
+                                        <Select value={formData.status}
+                                            onValueChange={(value) => setFormData({
+                                                ...formData, status: value as StatusAlat
+                                            })} >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih status" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="tersedia">Tersedia</SelectItem>
+                                                <SelectItem value="tidak-tersedia">Tidak Tersedia</SelectItem>
+                                                <SelectItem value="dipinjam">Dipinjam</SelectItem>
+                                                <SelectItem value="maintenence">Maintenence</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="col-span-6">
+                                        <Label>Lokasi Alat</Label>
+                                        <Textarea
+                                            className="focus-visible:ring-0"
+                                            placeholder="Contoh: Ruang 1"
+                                            value={formData.lokasi}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, lokasi: e.target.value })
+                                            }
+                                        />
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            {/* ================= SPESIFIKASI ================= */}
+                            <TabsContent value="spesifikasi">
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label>Spesifikasi Tambahan</Label>
+
+                                        {formData.spesifikasi.map((item, idx) => (
+                                            <div key={idx} className="flex gap-2 mb-2">
+                                                <Input
+                                                    placeholder="Contoh: Daya"
+                                                    value={item.name}
+                                                    className="focus-visible:ring-0"
+                                                    onChange={(e) => {
+                                                        const copy = [...formData.spesifikasi];
+                                                        copy[idx] = {
+                                                            ...copy[idx],
+                                                            name: e.target.value,
+                                                        };
+                                                        setFormData({ ...formData, spesifikasi: copy });
+                                                    }}
+                                                />
+
+                                                <Input
+                                                    placeholder="Contoh: 220 VA"
+                                                    value={item.value}
+                                                    className="focus-visible:ring-0"
+                                                    onChange={(e) => {
+                                                        const copy = [...formData.spesifikasi];
+                                                        copy[idx] = {
+                                                            ...copy[idx],
+                                                            value: e.target.value,
+                                                        };
+                                                        setFormData({ ...formData, spesifikasi: copy });
+                                                    }}
+                                                />
+
+                                                {formData.spesifikasi.length > 1 && (
+                                                    <Button
+                                                        variant="destructive"
+                                                        className="cursor-pointer"
+                                                        onClick={() => {
+                                                            const copy = formData.spesifikasi.filter(
+                                                                (_, i) => i !== idx
+                                                            );
+                                                            setFormData({
+                                                                ...formData,
+                                                                spesifikasi: copy,
+                                                            });
+                                                        }}
+                                                    >
+                                                        <Trash className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        <Button
+                                            onClick={() =>
+                                                setFormData({
+                                                    ...formData,
+                                                    spesifikasi: [
+                                                        ...formData.spesifikasi,
+                                                        { name: "", value: "" },
+                                                    ],
+                                                })
+                                            }
+                                            className="cursor-pointer"
+                                        >
+                                            Tambah Field
+                                            <PlusIcon />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            {/* ================= DESKRIPSI ================= */}
+                            <TabsContent value="deskripsi">
+                                <Label>Deskripsi</Label>
+                                <Textarea
+                                    placeholder="Contoh: Alat ini digunakan untuk melakukan penelitian"
+                                    value={formData.deskripsi}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, deskripsi: e.target.value })
+                                    }
                                 />
-                            )}
+                            </TabsContent>
                         </div>
+                    </Tabs>
 
-                        {/* Nama Alat */}
-                        <div className="col-span-4">
-                            <Label>Nama Alat</Label>
-                            <Input
-                                value={formData.nama_alat}
-                                placeholder="Masukkan nama alat ..."
-                                onChange={(e) =>
-                                    setFormData({ ...formData, nama_alat: e.target.value })
-                                }
-                            />
-                        </div>
-
-                        {/* Kode Alat */}
-                        <div className="col-span-2">
-                            <Label>Kode Alat</Label>
-                            <Input
-                                value={formData.kode_alat}
-                                placeholder="Masukkan kode alat ..."
-                                onChange={(e) =>
-                                    setFormData({ ...formData, kode_alat: e.target.value })
-                                }
-                            />
-                        </div>
-
-                        {/* Harga */}
-                        <div className="col-span-2">
-                            <Label>Harga</Label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-800">Rp</span>
-                                <Input
-                                    type="text"
-                                    className="pl-10"
-                                    value={formData.harga ? formatRupiah(formData.harga) : ""}
-                                    onChange={(e) => {
-                                        const onlyNumbers = e.target.value.replace(/\D/g, "");
-                                        setFormData({ ...formData, harga: onlyNumbers });
-                                    }}
-                                    placeholder="0"
-                                />
-                            </div>
-                        </div>
-
-
-                        {/* Kategori */}
-                        <div className="col-span-2">
-                            <Label>Kategori</Label>
-                            <Select
-                                value={
-                                    formData.id_kategori
-                                        ? String(formData.id_kategori)
-                                        : undefined
-                                }
-                                onValueChange={(value) =>
-                                    setFormData({ ...formData, id_kategori: Number(value) })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih kategori" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {kategoriList.map((k) => (
-                                        <SelectItem key={k.id} value={String(k.id)}>
-                                            {k.nama_kategori}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Batas Peminjaman */}
-                        <div className="col-span-2">
-                            <Label>Batas Peminjaman</Label>
-                            <div className="relative">
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    value={formData.batas_peminjaman || ""} // kosong di input, tetap number di state
-                                    onChange={(e) => {
-                                        const value = Number(e.target.value);
-                                        setFormData({
-                                            ...formData,
-                                            // minimal 1
-                                            batas_peminjaman: value < 1 ? 1 : value,
-                                        });
-                                    }}
-                                    className="pr-14"
-                                    placeholder="1"
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                                    hari
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Kondisi */}
-                        <div className="col-span-2">
-                            <Label>Kondisi</Label>
-                            <Select
-                                value={formData.kondisi}
-                                onValueChange={(value) =>
-                                    setFormData({ ...formData, kondisi: value as KondisiAlat })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih kondisi" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="baik">Baik</SelectItem>
-                                    <SelectItem value="rusak-ringan">Rusak Ringan</SelectItem>
-                                    <SelectItem value="rusak-berat">Rusak Berat</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Status */}
-                        <div className="col-span-2">
-                            <Label>Status</Label>
-                            <Select
-                                value={formData.status}
-                                onValueChange={(value) =>
-                                    setFormData({ ...formData, status: value as StatusAlat })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="tersedia">Tersedia</SelectItem>
-                                    <SelectItem value="tidak-tersedia">Tidak Tersedia</SelectItem>
-                                    <SelectItem value="dipinjam">Dipinjam</SelectItem>
-                                    <SelectItem value="maintenence">Maintenence</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Lokasi */}
-                        <div className="col-span-4">
-                            <Label>Lokasi Alat</Label>
-                            <Textarea
-                                placeholder="Masukkan lokasi alat ..."
-                                value={formData.lokasi}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, lokasi: e.target.value })
-                                }
-                            />
-                        </div>
-
-                        {/* Deskripsi */}
-                        <div className="col-span-4">
-                            <Label>Deskripsi</Label>
-                            <Textarea
-                                placeholder="Masukkan deskripsi alat ..."
-                                value={formData.deskripsi}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, deskripsi: e.target.value })
-                                }
-                            />
-                        </div>
-                    </div>
                     <DialogFooter>
                         <Button variant="outline" className="cursor-pointer" onClick={() => setShowAddModal(false)}>
                             Batal
@@ -795,193 +896,216 @@ export default function ToolManagementPage() {
                         <Button onClick={handleAdd} className="cursor-pointer">Tambah Alat</Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* Edit Modal */}
             <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-                <DialogContent>
+                <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle>Edit Alat</DialogTitle>
                     </DialogHeader>
-                    <div className="grid grid-cols-4 gap-4">
-                        {/* Foto */}
-                        <div className="col-span-4">
-                            <Label>Foto Alat</Label>
-                            <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) =>
-                                    setFormData({
-                                        ...formData,
-                                        foto_alat: e.target.files?.[0] || null,
-                                    })
-                                }
-                            />
-                            {previewFoto && (
-                                <img
-                                    src={previewFoto}
-                                    alt="Preview"
-                                    className="mt-2 w-full max-h-48 object-contain rounded border"
-                                />
-                            )}
-                        </div>
 
-                        {/* Nama Alat */}
-                        <div className="col-span-4">
-                            <Label>Nama Alat</Label>
-                            <Input
-                                value={formData.nama_alat}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, nama_alat: e.target.value })
-                                }
-                            />
-                        </div>
+                    {/* TABS */}
+                    <Tabs defaultValue="utama" className="flex-1 flex flex-col">
+                        <TabsList className="grid grid-cols-4 w-full">
+                            <TabsTrigger value="media" className="cursor-pointer hover:bg-gray-300 hover:text-gray-900">Media</TabsTrigger>
+                            <TabsTrigger value="utama" className="cursor-pointer hover:bg-gray-300 hover:text-gray-900">Informasi Utama</TabsTrigger>
+                            <TabsTrigger value="spesifikasi" className="cursor-pointer hover:bg-gray-300 hover:text-gray-900">Spesifikasi</TabsTrigger>
+                            <TabsTrigger value="deskripsi" className="cursor-pointer hover:bg-gray-300 hover:text-gray-900">Deskripsi</TabsTrigger>
+                        </TabsList>
 
-                        {/* Kode Alat */}
-                        <div className="col-span-2">
-                            <Label>Kode Alat</Label>
-                            <Input
-                                value={formData.kode_alat}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, kode_alat: e.target.value })
-                                }
-                            />
-                        </div>
+                        {/* SCROLL AREA */}
+                        <div className="flex-1 overflow-y-auto mt-4">
+                            {/* ================= MEDIA ================= */}
+                            <TabsContent value="media">
+                                <div className="space-y-4">
+                                    <Label>Foto Alat</Label>
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        className="cursor-pointer"
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, foto_alat: e.target.files?.[0] || null })
+                                        }
+                                    />
+                                    {previewFoto && (
+                                        <img
+                                            src={previewFoto}
+                                            alt="Preview"
+                                            className="w-full max-h-64 object-contain rounded border"
+                                        />
+                                    )}
+                                </div>
+                            </TabsContent>
 
-                        {/* Harga */}
-                        <div className="col-span-2">
-                            <Label>Harga</Label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-800">Rp</span>
-                                <Input
-                                    type="text"
-                                    className="pl-10"
-                                    value={formData.harga ? formatRupiah(formData.harga) : ""}
-                                    onChange={(e) => {
-                                        const onlyNumbers = e.target.value.replace(/\D/g, "");
-                                        setFormData({ ...formData, harga: onlyNumbers });
-                                    }}
-                                    placeholder="0"
-                                />
-                            </div>
-                        </div>
+                            {/* ================= INFORMASI UTAMA ================= */}
+                            <TabsContent value="utama">
+                                <div className="grid grid-cols-6 gap-4">
+                                    <div className="col-span-6">
+                                        <Label>Nama Alat</Label>
+                                        <Input
+                                            value={formData.nama_alat}
+                                            onChange={(e) => setFormData({ ...formData, nama_alat: e.target.value })}
+                                        />
+                                    </div>
 
+                                    <div className="col-span-3">
+                                        <Label>Kode Alat</Label>
+                                        <Input
+                                            value={formData.kode_alat}
+                                            onChange={(e) => setFormData({ ...formData, kode_alat: e.target.value })}
+                                        />
+                                    </div>
 
-                        {/* Kategori */}
-                        <div className="col-span-2">
-                            <Label>Kategori</Label>
-                            <Select
-                                value={String(formData.id_kategori)}
-                                onValueChange={(value) =>
-                                    setFormData({ ...formData, id_kategori: Number(value) })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih kategori" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {kategoriList.map((k) => (
-                                        <SelectItem key={k.id} value={String(k.id)}>
-                                            {k.nama_kategori}
-                                        </SelectItem>
+                                    <div className="col-span-3">
+                                        <Label>Harga</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2">Rp</span>
+                                            <Input
+                                                className="focus-visible:ring-0 pl-10"
+                                                value={formData.harga ? formatRupiah(formData.harga) : ""}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        harga: e.target.value.replace(/\D/g, ""),
+                                                    })
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="col-span-3">
+                                        <Label>Kategori</Label>
+                                        <Select
+                                            value={formData.id_kategori ? String(formData.id_kategori) : undefined}
+                                            onValueChange={(v) => setFormData({ ...formData, id_kategori: Number(v) })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih kategori" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {kategoriList.map((k) => (
+                                                    <SelectItem key={k.id} value={String(k.id)}>{k.nama_kategori}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <Label>Batas Peminjaman</Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="number"
+                                                min={1}
+                                                value={formData.batas_peminjaman || ""}
+                                                onChange={(e) => setFormData({
+                                                    ...formData,
+                                                    batas_peminjaman: Math.max(1, Number(e.target.value)),
+                                                })}
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">hari</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <Label>Kondisi</Label>
+                                        <Select
+                                            value={formData.kondisi}
+                                            onValueChange={(v) => setFormData({ ...formData, kondisi: v as KondisiAlat })}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Pilih kondisi" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="baik">Baik</SelectItem>
+                                                <SelectItem value="rusak-ringan">Rusak Ringan</SelectItem>
+                                                <SelectItem value="rusak-berat">Rusak Berat</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <Label>Status</Label>
+                                        <Select
+                                            value={formData.status}
+                                            onValueChange={(v) => setFormData({ ...formData, status: v as StatusAlat })}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="tersedia">Tersedia</SelectItem>
+                                                <SelectItem value="tidak-tersedia">Tidak Tersedia</SelectItem>
+                                                <SelectItem value="dipinjam">Dipinjam</SelectItem>
+                                                <SelectItem value="maintenance">Maintenance</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="col-span-6">
+                                        <Label>Lokasi Alat</Label>
+                                        <Textarea
+                                            value={formData.lokasi}
+                                            onChange={(e) => setFormData({ ...formData, lokasi: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            {/* ================= SPESIFIKASI ================= */}
+                            <TabsContent value="spesifikasi">
+                                <div className="space-y-4">
+                                    <Label>Spesifikasi Tambahan</Label>
+                                    {formData.spesifikasi.map((item, idx) => (
+                                        <div key={idx} className="flex gap-2 mb-2">
+                                            <Input
+                                                placeholder="Contoh: Daya"
+                                                value={item.name}
+                                                onChange={(e) => {
+                                                    const copy = [...formData.spesifikasi];
+                                                    copy[idx] = { ...copy[idx], name: e.target.value };
+                                                    setFormData({ ...formData, spesifikasi: copy });
+                                                }}
+                                            />
+                                            <Input
+                                                placeholder="Contoh: 220 VA"
+                                                value={item.value}
+                                                onChange={(e) => {
+                                                    const copy = [...formData.spesifikasi];
+                                                    copy[idx] = { ...copy[idx], value: e.target.value };
+                                                    setFormData({ ...formData, spesifikasi: copy });
+                                                }}
+                                            />
+                                            {formData.spesifikasi.length > 1 && (
+                                                <Button variant="destructive" onClick={() => {
+                                                    setFormData({
+                                                        ...formData,
+                                                        spesifikasi: formData.spesifikasi.filter((_, i) => i !== idx),
+                                                    });
+                                                }}>
+                                                    <Trash className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                                    <Button onClick={() => setFormData({
+                                        ...formData,
+                                        spesifikasi: [...formData.spesifikasi, { name: "", value: "" }],
+                                    })}>
+                                        Tambah Field <PlusIcon />
+                                    </Button>
+                                </div>
+                            </TabsContent>
 
-                        {/* Batas Peminjaman */}
-                        <div className="col-span-2">
-                            <Label>Batas Peminjaman</Label>
-                            <div className="relative">
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    value={formData.batas_peminjaman || ""} // kosong di input, tetap number di state
-                                    onChange={(e) => {
-                                        const value = Number(e.target.value);
-                                        setFormData({
-                                            ...formData,
-                                            // minimal 1
-                                            batas_peminjaman: value < 1 ? 1 : value,
-                                        });
-                                    }}
-                                    className="pr-14"
-                                    placeholder="1"
+                            {/* ================= DESKRIPSI ================= */}
+                            <TabsContent value="deskripsi">
+                                <Label>Deskripsi</Label>
+                                <Textarea
+                                    value={formData.deskripsi}
+                                    onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                                    hari
-                                </span>
-                            </div>
+                            </TabsContent>
                         </div>
+                    </Tabs>
 
-                        {/* Kondisi */}
-                        <div className="col-span-2">
-                            <Label>Kondisi</Label>
-                            <Select
-                                value={formData.kondisi}
-                                onValueChange={(value) =>
-                                    setFormData({ ...formData, kondisi: value as KondisiAlat })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih kondisi" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="baik">Baik</SelectItem>
-                                    <SelectItem value="rusak-ringan">Rusak Ringan</SelectItem>
-                                    <SelectItem value="rusak-berat">Rusak Berat</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Status */}
-                        <div className="col-span-2">
-                            <Label>Status</Label>
-                            <Select
-                                value={formData.status}
-                                onValueChange={(value) =>
-                                    setFormData({ ...formData, status: value as StatusAlat })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="tersedia">Tersedia</SelectItem>
-                                    <SelectItem value="tidak-tersedia">Tidak Tersedia</SelectItem>
-                                    <SelectItem value="dipinjam">Dipinjam</SelectItem>
-                                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Lokasi */}
-                        <div className="col-span-4">
-                            <Label>Lokasi Alat</Label>
-                            <Textarea
-                                value={formData.lokasi}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, lokasi: e.target.value })
-                                }
-                            />
-                        </div>
-
-                        {/* Deskripsi */}
-                        <div className="col-span-4">
-                            <Label>Deskripsi</Label>
-                            <Textarea
-                                value={formData.deskripsi}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, deskripsi: e.target.value })
-                                }
-                            />
-                        </div>
-                    </div>
                     <DialogFooter>
-                        <Button variant="outline" className="cursor-pointer" onClick={() => setShowEditModal(false)}>
-                            Batal
-                        </Button>
-                        <Button onClick={handleEdit} className="cursor-pointer">Simpan Perubahan</Button>
+                        <Button variant="outline" onClick={() => setShowEditModal(false)}>Batal</Button>
+                        <Button onClick={handleEdit}>Simpan Perubahan</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -992,7 +1116,7 @@ export default function ToolManagementPage() {
                         <DialogHeader>
                             <DialogTitle>Detail Alat</DialogTitle>
                         </DialogHeader>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                             {/* Gambar */}
                             <div className="md:col-span-2">
                                 <div className="aspect-square w-full overflow-hidden rounded-xl border bg-gray-50 flex items-center justify-center">
@@ -1037,11 +1161,25 @@ export default function ToolManagementPage() {
                                 </div>
 
                                 {selectedAlat.deskripsi && (
-                                    <div className="pt-2">
-                                        <p className="text-xs font-medium text-gray-500 mb-1">Deskripsi</p>
-                                        <p className="text-sm text-gray-700 leading-relaxed">
-                                            {selectedAlat.deskripsi}
+                                    <div className="space-y-1.5">
+                                        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Deskripsi</p>
+                                        <p className="text-sm text-gray-600 leading-relaxed italic">
+                                            "{selectedAlat.deskripsi}"
                                         </p>
+                                    </div>
+                                )}
+
+                                {Array.isArray(selectedAlat.spesifikasi) && selectedAlat.spesifikasi.length > 0 && (
+                                    <div className="pt-2">
+                                        <p className="text-xs font-medium text-gray-500 mb-2">Spesifikasi</p>
+                                        <div className="grid grid-cols-1 gap-2 bg-gray-50 p-3 rounded-lg">
+                                            {selectedAlat.spesifikasi.map((spec, index) => (
+                                                <div key={index} className="flex border-b border-gray-200 last:border-0 pb-1 last:pb-0">
+                                                    <span className="text-sm text-gray-500 w-1/3">{spec.name}</span>
+                                                    <span className="text-sm font-semibold text-gray-800 w-2/3">: {spec.value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>

@@ -6,6 +6,11 @@ export interface Kategori {
     jumlah_alat: number;
 }
 
+export interface SimpleKategori {
+    id: number;
+    nama_kategori: string;
+}
+
 export type KategoriForm = {
     nama_kategori: string;
     deskripsi: string;

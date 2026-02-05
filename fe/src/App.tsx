@@ -29,7 +29,12 @@ import ToolListPage from './pages/peminjam/ToolListPage'
 import MyBorrowingsPage from './pages/peminjam/MyBorrowingsPage'
 import { Toaster } from 'sonner'
 import SettingPage from './pages/SettingPage'
-import HomePage from './pages/HomePage'
+import { EquipmentListPage } from './pages/landing/EquipmentListPage'
+import { LandingPage } from './pages/landing/Root'
+import HomePage from './pages/landing/HomePage'
+import { HowToBorrowPage } from './pages/landing/HowToBorrowPage'
+import { AboutPage } from './pages/landing/AboutPage'
+import { EquipmentDetailPage } from './pages/landing/EquipmentDetailPage'
 
 export default function App() {
   return (
@@ -38,8 +43,15 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />
 
+          <Route element={<LandingPage />}>
+            <Route path="home" element={<HomePage />} />
+            <Route path="list-peralatan" element={<EquipmentListPage />} />
+            <Route path="cara-peminjaman" element={<HowToBorrowPage />} />
+            <Route path="tentang-kami" element={<AboutPage />} />
+            <Route path="detail-alat/:id"  element={<EquipmentDetailPage />} />
+          </Route>
+
           <Route element={<PublicRoute />}>
-            <Route path="/home" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
           </Route>

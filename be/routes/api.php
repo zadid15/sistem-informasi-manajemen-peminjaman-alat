@@ -19,6 +19,9 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::post('/check-email', [AuthController::class, 'checkEmail']);
+Route::get('/list-kategori', [KategoriController::class, 'kategoriForUserWithoutLogin']);
+Route::get('/list-alat', [AlatController::class, 'getListAlatForUserWithoudLogin']);
+Route::get('/detail-alat/{id}', [AlatController::class, 'showWithoutLogin']);
 
 // Log routes
 Route::get('/logs', [LogController::class, 'index'])->middleware('auth:sanctum');
@@ -27,10 +30,12 @@ Route::get('/logs', [LogController::class, 'index'])->middleware('auth:sanctum')
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
 });
+
 // Kategori routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('kategori', KategoriController::class);
 });
+
 // Alat routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('alat', AlatController::class);

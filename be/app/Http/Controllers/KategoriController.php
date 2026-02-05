@@ -13,6 +13,24 @@ class KategoriController extends Controller
     /**
      * Display a listing of the resource.
      */
+    public function kategoriForUserWithoutLogin(Request $request)
+    {
+        $search = $request->query('search');
+
+        $query = Kategori::select('id', 'nama_kategori');
+
+        if ($search) {
+            $query->where('nama_kategori', 'like', "%{$search}%");
+        }
+
+        $kategori = $query->orderBy('nama_kategori')->get();
+
+        return response()->json([
+            'message' => 'List of kategori',
+            'data' => $kategori
+        ]);
+    }
+
     public function index(Request $request)
     {
         $aktor = $request->user();

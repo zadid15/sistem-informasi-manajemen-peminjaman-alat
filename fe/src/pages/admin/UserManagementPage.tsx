@@ -101,11 +101,6 @@ export default function UserManagementPage() {
     });
 
     const handleAdd = async () => {
-        if (formData.password !== formData.confirm_password) {
-            toast.error("Password dan Confirm Password tidak sama");
-            return;
-        }
-
         try {
             await createUser({
                 nama: formData.nama,
@@ -126,11 +121,6 @@ export default function UserManagementPage() {
 
     const handleEdit = async () => {
         if (!selectedUser) return;
-
-        if (formData.password && formData.password !== formData.confirm_password) {
-            toast.error("Password dan Confirm Password tidak sama");
-            return;
-        }
 
         try {
             await updateUser(selectedUser.id, {
@@ -510,18 +500,18 @@ export default function UserManagementPage() {
                     <div className="space-y-6">
                         {/* FORM */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
+                            <div className="col-span-2">
                                 <Label>Nama Lengkap</Label>
                                 <Input
                                     value={formData.nama}
                                     onChange={(e) =>
                                         setFormData({ ...formData, nama: e.target.value })
                                     }
-                                    placeholder="Masukkan nama lengkap"
+                                    placeholder="Contoh: Johan"
                                 />
                             </div>
 
-                            <div>
+                            <div className="col-span-2">
                                 <Label>Email</Label>
                                 <Input
                                     type="email"
@@ -529,7 +519,7 @@ export default function UserManagementPage() {
                                     onChange={(e) =>
                                         setFormData({ ...formData, email: e.target.value })
                                     }
-                                    placeholder="user@example.com"
+                                    placeholder="Contoh: johan@gmail.com"
                                 />
                             </div>
 
@@ -541,33 +531,7 @@ export default function UserManagementPage() {
                                     onChange={(e) =>
                                         setFormData({ ...formData, password: e.target.value })
                                     }
-                                    placeholder="••••••••"
-                                />
-                            </div>
-
-                            <div>
-                                <Label>Confirm Password</Label>
-                                <Input
-                                    type="text"
-                                    value={formData.confirm_password}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            confirm_password: e.target.value,
-                                        })
-                                    }
-                                    placeholder="Ulangi password"
-                                />
-                            </div>
-
-                            <div>
-                                <Label>No. Telepon</Label>
-                                <Input
-                                    value={formData.phone}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, phone: e.target.value })
-                                    }
-                                    placeholder="08xxxxxxxxxx"
+                                    placeholder="Contoh: Joh4n123"
                                 />
                             </div>
 
@@ -598,6 +562,7 @@ export default function UserManagementPage() {
                     <DialogFooter>
                         <Button
                             variant="outline"
+                            className="cursor-pointer"
                             onClick={() => {
                                 resetForm();
                                 setShowAddModal(false);
@@ -605,7 +570,7 @@ export default function UserManagementPage() {
                         >
                             Batal
                         </Button>
-                        <Button onClick={handleAdd}>Tambah User</Button>
+                        <Button className="cursor-pointer" onClick={handleAdd}>Tambah User</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -616,8 +581,8 @@ export default function UserManagementPage() {
                     <DialogHeader>
                         <DialogTitle>Edit User</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="col-span-2">
                             <Label htmlFor="edit-name">Nama Lengkap</Label>
                             <Input
                                 id="edit-name"
@@ -625,7 +590,7 @@ export default function UserManagementPage() {
                                 onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
                             />
                         </div>
-                        <div>
+                        <div className="col-span-2">
                             <Label htmlFor="edit-email">Email</Label>
                             <Input
                                 id="edit-email"
@@ -638,26 +603,17 @@ export default function UserManagementPage() {
                             <Label htmlFor="edit-password">Password</Label>
                             <Input
                                 id="edit-password"
-                                type="password"
-                                placeholder="********"
+                                type="text"
+                                placeholder="Contoh: Joh4n123"
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="edit-confirm_password">Confirm Password</Label>
-                            <Input
-                                id="edit-confirm_password"
-                                type="password"
-                                placeholder="Ulangi password baru"
-                                value={formData.confirm_password}
-                                onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
                             />
                         </div>
                         <div>
                             <Label htmlFor="edit-phone">No. Telepon</Label>
                             <Input
                                 id="edit-phone"
+                                placeholder="Contoh: 0856xxxx"
                                 value={formData.phone}
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             />
@@ -689,10 +645,10 @@ export default function UserManagementPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                        <Button variant="outline" className="cursor-pointer" onClick={() => setShowEditModal(false)}>
                             Batal
                         </Button>
-                        <Button onClick={handleEdit}>Simpan Perubahan</Button>
+                        <Button className="cursor-pointer" onClick={handleEdit}>Simpan Perubahan</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

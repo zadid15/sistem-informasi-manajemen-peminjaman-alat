@@ -1,5 +1,25 @@
-import type { Alat, AlatForm } from "../types/alat";
+import type { Alat, AlatForm} from "../types/alat";
 import axiosInstance from "../utils/axios";
+
+// without login
+export const getListAlat = async (params?: {
+    search?: string;
+    kategori?: number | null;
+    status?: "semua" | "tersedia" | "dipinjam";
+}) => {
+    const res = await axiosInstance.get("/list-alat", {
+        params: {
+            search: params?.search,
+            kategori: params?.kategori,
+            status: params?.status === "semua" ? undefined : params?.status,
+        },
+    });
+
+    return {
+        alat: res.data.data as Alat[],
+        message: res.data.message,
+    };
+};
 
 export const getAlat = async (
     page = 1,
@@ -23,19 +43,38 @@ export const getAlat = async (
     };
 };
 
+export const showAlat = async (id: number) => {
+    const res = await axiosInstance.get(`/detail-alat/${id}`);
+
+    return {
+        alat: res.data.data as Alat,
+        message: res.data.message,
+    };
+};
+
 export const createAlat = async (data: AlatForm) => {
     const formDataToSend = new FormData();
 
     Object.entries(data).forEach(([key, value]) => {
         if (value === null || value === undefined) return;
 
-        // khusus foto_alat
+        // khusus foto
         if (key === "foto_alat" && value instanceof File) {
             formDataToSend.append(key, value);
-        } else {
-            // untuk string/number
-            formDataToSend.append(key, String(value));
+            return;
         }
+
+        // khusus spesifikasi (array of object)
+        if (key === "spesifikasi" && Array.isArray(value)) {
+            value.forEach((item, index) => {
+                formDataToSend.append(`spesifikasi[${index}][name]`, item.name);
+                formDataToSend.append(`spesifikasi[${index}][value]`, item.value);
+            });
+            return;
+        }
+
+        // default
+        formDataToSend.append(key, String(value));
     });
 
     const res = await axiosInstance.post("/alat", formDataToSend, {

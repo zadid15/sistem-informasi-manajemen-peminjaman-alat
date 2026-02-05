@@ -142,24 +142,36 @@ export default function SettingPage() {
             const res = await updateMe(formData);
             const updatedUser = res.data;
 
-            // update preview lokal
-            setPreview(`${updatedUser.foto}?t=${Date.now()}`);
+            // 🔁 jadikan hasil backend sebagai baseline baru
+            const syncedUser: UserForm = {
+                nama: updatedUser.nama,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                phone: updatedUser.phone ?? "",
+                jenis_kelamin: updatedUser.jenis_kelamin ?? "",
+                alamat: updatedUser.alamat ?? "",
+                foto: updatedUser.foto ?? "", // ⬅️ STRING, bukan File
+            };
+
+            // reset state form (important!)
+            setUser(syncedUser);
+            setOriginalUser(syncedUser);
+
+            // update preview avatar
+            setPreview(updatedUser.foto ? `${updatedUser.foto}?t=${Date.now()}` : null);
+
+            // reset file input biar nggak nyisa File
+            if (fileRef.current) {
+                fileRef.current.value = "";
+            }
 
             // simpan ke localStorage
             localStorage.setItem("user", JSON.stringify(updatedUser));
 
-            // ⚡ trigger event supaya LayoutWrapper update avatar
+            // trigger update avatar global
             window.dispatchEvent(new Event("userUpdated"));
 
-            // update originalUser state
-            setOriginalUser({
-                ...originalUser!,
-                ...updatedUser,
-                foto: updatedUser.foto ?? "",
-            });
-
             toast.success("Profil berhasil diperbarui!");
-
         } catch {
             toast.error("Gagal memperbarui profil");
         }

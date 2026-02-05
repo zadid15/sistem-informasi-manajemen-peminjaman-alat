@@ -13,6 +13,78 @@ class AlatController extends Controller
     /**
      * Display a listing of the resource.
      */
+    public function getListAlatForUserWithoudLogin(Request $request)
+    {
+        // ambil query param
+        $search   = $request->query('search');
+        $kategori = $request->query('kategori'); // sebelumnya "category"
+        $status   = $request->query('status');
+
+        // base query
+        $query = Alat::with('kategori')
+            ->select(
+                'id',
+                'nama_alat',
+                'id_kategori',
+                'deskripsi',
+                'status',
+                'foto_alat',
+                'kode_alat',
+                'kondisi',
+                'lokasi',
+                'harga',
+                'batas_peminjaman',
+                'spesifikasi'
+            );
+
+        // filter search
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_alat', 'like', "%{$search}%")
+                    ->orWhere('kode_alat', 'like', "%{$search}%");
+            });
+        }
+
+        // filter kategori
+        if (!empty($kategori) && $kategori !== 'all') {
+            $query->where('id_kategori', $kategori);
+        }
+
+        // filter status
+        if (!empty($status) && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        // ambil semua data tanpa paginate
+        $alat = $query->get();
+
+        // transform response
+        $data = $alat->map(function ($alat) {
+            return [
+                'id'          => $alat->id,
+                'nama_alat'   => $alat->nama_alat,
+                'id_kategori' => [
+                    'id'   => $alat->id_kategori,
+                    'nama_kategori' => $alat->kategori?->nama_kategori
+                ],
+                'kategori'    => $alat->kategori?->nama_kategori,
+                'deskripsi'   => $alat->deskripsi,
+                'status'      => $alat->status,
+                'foto_alat'   => $alat->foto_alat
+                    ? asset('storage/' . $alat->foto_alat)
+                    : null,
+
+                'spesifikasi' => $alat->spesifikasi ?? [],
+            ];
+        });
+
+        // response
+        return response()->json([
+            'message' => 'List of alat',
+            'data'    => $data,
+        ]);
+    }
+
     public function index(Request $request)
     {
         $aktor = $request->user();
@@ -30,15 +102,16 @@ class AlatController extends Controller
         $query = Alat::with('kategori')->select(
             'id',
             'nama_alat',
-            'kode_alat',
+            'id_kategori',
             'deskripsi',
+            'status',
             'foto_alat',
+            'kode_alat',
             'kondisi',
             'lokasi',
             'harga',
             'batas_peminjaman',
-            'status',
-            'id_kategori'
+            'spesifikasi'
         );
 
         if ($search) {
@@ -65,19 +138,21 @@ class AlatController extends Controller
                 'id' => $alat->id,
                 'nama_alat' => $alat->nama_alat,
                 'kode_alat' => $alat->kode_alat,
-                'deskripsi' => $alat->deskripsi,
-                'foto_alat' => $alat->foto_alat
-                    ? asset('storage/' . $alat->foto_alat)
-                    : null,
                 'kondisi' => $alat->kondisi,
                 'lokasi' => $alat->lokasi,
                 'harga' => $alat->harga,
                 'batas_peminjaman' => $alat->batas_peminjaman,
-                'status' => $alat->status,
                 'kategori' => [
-                    'id' => $alat->kategori?->id,
-                    'nama_kategori' => $alat->kategori?->nama_kategori,
+                    'id' => $alat->id_kategori,
+                    'nama_kategori' => $alat->kategori?->nama_kategori
                 ],
+                'deskripsi' => $alat->deskripsi,
+                'status' => $alat->status,
+                'foto_alat' => $alat->foto_alat
+                    ? asset('storage/' . $alat->foto_alat)
+                    : null,
+
+                'spesifikasi' => $alat->spesifikasi ?? [],
             ];
         });
 
@@ -117,6 +192,7 @@ class AlatController extends Controller
             'lokasi' => 'required|string',
             'batas_peminjaman' => 'required|integer|min:0',
             'status' => 'required|string',
+            'spesifikasi' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -135,6 +211,10 @@ class AlatController extends Controller
             $path = $file->storeAs('alat', $filename, 'public');
 
             $data['foto_alat'] = $path; // simpan: alat/alat_xxx.jpg
+        }
+
+        if (isset($data['spesifikasi'])) {
+            $data['spesifikasi'] = $data['spesifikasi']; // Laravel akan otomatis cast ke JSON
         }
 
         $alat = Alat::create($data);
@@ -162,6 +242,7 @@ class AlatController extends Controller
                 'lokasi' => $alat->lokasi,
                 'batas_peminjaman' => $alat->batas_peminjaman,
                 'status' => $alat->status,
+                'spesifikasi' => $alat->spesifikasi ?? [],
             ]
         ]);
     }
@@ -169,9 +250,71 @@ class AlatController extends Controller
     /**
      * Display the specified resource.
      */
+
+    public function showWithoutLogin($id)
+    {
+        // Pakai find() manual, jangan route model binding
+        $alat = Alat::with('kategori')->find($id);
+
+        if (!$alat) {
+            return response()->json([
+                'message' => 'Alat tidak ditemukan',
+                'data' => null
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Detail alat',
+            'data' => [
+                'id'            => $alat->id,
+                'nama_alat'     => $alat->nama_alat,
+                'kode_alat'     => $alat->kode_alat,
+                'kondisi'       => $alat->kondisi,
+                'lokasi'        => $alat->lokasi,
+                'harga'         => $alat->harga,
+                'batas_peminjaman' => $alat->batas_peminjaman,
+                'kategori'      => [
+                    'id'            => $alat->id_kategori,
+                    'nama_kategori' => $alat->kategori?->nama_kategori
+                ],
+                'deskripsi'     => $alat->deskripsi,
+                'status'        => $alat->status,
+                'foto_alat'     => $alat->foto_alat ? asset('storage/' . $alat->foto_alat) : null,
+                'spesifikasi'   => $alat->spesifikasi ?? [],
+            ]
+        ]);
+    }
+
     public function show(Alat $alat)
     {
-        //
+        // Load relasi kategori
+        $alat->load('kategori');
+
+        // Transform agar formatnya sama persis dengan index
+        $data = [
+            'id'            => $alat->id,
+            'nama_alat'     => $alat->nama_alat,
+            'kode_alat'     => $alat->kode_alat,
+            'kondisi'       => $alat->kondisi,
+            'lokasi'        => $alat->lokasi,
+            'kategori'      => [
+                'id'            => $alat->id_kategori,
+                'nama_kategori' => $alat->kategori?->nama_kategori
+            ],
+            'deskripsi'     => $alat->deskripsi,
+            'status'        => $alat->status,
+            'foto_alat'     => $alat->foto_alat
+                ? asset('storage/' . $alat->foto_alat)
+                : null,
+
+            // Ambil data JSON spesifikasi dari database, sama seperti index
+            'spesifikasi'   => $alat->spesifikasi ?? [],
+        ];
+
+        return response()->json([
+            'message' => 'Detail alat',
+            'data'    => $data,
+        ]);
     }
 
     /**
@@ -207,6 +350,7 @@ class AlatController extends Controller
             'lokasi' => 'sometimes|required|string',
             'batas_peminjaman' => 'sometimes|required|integer|min:0',
             'status' => 'sometimes|required|string',
+            'spesifikasi' => 'nullable|array',
         ]);
 
         // 📸 Jika upload foto baru
@@ -248,6 +392,7 @@ class AlatController extends Controller
                 'lokasi' => $alat->lokasi,
                 'batas_peminjaman' => $alat->batas_peminjaman,
                 'status' => $alat->status,
+                'spesifikasi' => $alat->spesifikasi ?? [],
             ]
         ]);
     }
