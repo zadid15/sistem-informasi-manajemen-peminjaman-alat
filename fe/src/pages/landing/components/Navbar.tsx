@@ -1,14 +1,42 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router";
-import { LogIn, Menu, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
+import { LogIn, LogOut, Menu, Settings, X } from "lucide-react";
 
 import simpa from "../../../assets/simpa-navbar.png";
 import simpaPutih from "../../../assets/simpa-navbar-putih.png";
+
+type User = {
+  nama: string;
+  role: string;
+  avatar?: string | null;
+};
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const [user, setUser] = useState<User | null>(() => {
+    const data = localStorage.getItem("user");
+    return data ? JSON.parse(data) : null;
+  });
+  const [isLoggedIn, setIsLoggedIn] = useState(() =>
+    !!localStorage.getItem("token")
+  );
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const syncAuth = () => {
+      setIsLoggedIn(!!localStorage.getItem("token"));
+
+      const data = localStorage.getItem("user");
+      setUser(data ? JSON.parse(data) : null);
+    };
+
+    window.addEventListener("storage", syncAuth);
+    return () => window.removeEventListener("storage", syncAuth);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,12 +47,36 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const navLinks = [
     { name: "Beranda", path: "/home" },
     { name: "Peralatan", path: "/list-peralatan" },
     { name: "Cara Peminjaman", path: "/cara-peminjaman" },
     { name: "Tentang Kami", path: "/tentang-kami" },
+    ...(isLoggedIn
+      ? [{ name: "Peminjaman", path: "/list-peminjaman" }]
+      : []),
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setIsDropdownOpen(false);
+    navigate("/login");
+  };
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -77,14 +129,47 @@ export function Navbar() {
 
           {/* Login Button */}
           <div className="hidden md:block">
-            <Link to="/login">
-              <button
-                className={`flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 cursor-pointer text-gray-900 font-medium rounded-xl transition-all ${isScrolled ? "bg-gray-200 hover:bg-gray-300" : "bg-gray-100"}`}
-              >
-                <LogIn size={18} className="group-hover:translate-x-1 transition-transform" />
-                Login
-              </button>
-            </Link>
+            {!isLoggedIn ? (
+              <Link to="/login">
+                <button
+                  className={`flex items-center gap-2 px-6 py-2.5 font-medium rounded-xl transition-all cursor-pointer ${isScrolled
+                      ? "bg-gray-200 hover:bg-gray-300 text-gray-900"
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-900"
+                    }`}
+                >
+                  <LogIn size={18} />
+                  Login
+                </button>
+              </Link>
+            ) : (
+              user && (
+                <div ref={dropdownRef} className="relative">
+                  <button onClick={() => setIsDropdownOpen((prev) => !prev)}>
+                    <Avatar user={user} />
+                  </button>
+
+                  {isDropdownOpen && (
+                    <div className="absolute right-0 mt-3 w-44 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                      <Link
+                        to="/setting"
+                        className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50"
+                      >
+                        <Settings size={16} />
+                        Setting
+                      </Link>
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut size={16} />
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -113,13 +198,54 @@ export function Navbar() {
                   {link.name}
                 </Link>
               ))}
-              <button className="mt-2 px-6 py-2.5 bg-lime-400 hover:bg-lime-500 text-gray-900 font-medium rounded-xl transition-all">
-                Login
-              </button>
+              {isLoggedIn && user && (
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex items-center gap-3 px-2 mb-3">
+                    <Avatar user={user} />
+                    <span className="text-sm font-medium">{user.nama}</span>
+                  </div>
+
+                  <Link
+                    to="/setting"
+                    className="flex items-center gap-3 px-2 py-2 text-sm hover:bg-gray-100 rounded-lg"
+                  >
+                    <Settings size={16} />
+                    Setting
+                  </Link>
+
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 px-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
     </nav>
+  );
+}
+
+function Avatar({ user }: { user: User }) {
+  const initial = user.nama.charAt(0).toUpperCase();
+
+  if (user.avatar) {
+    return (
+      <img
+        src={user.avatar}
+        alt={user.nama}
+        className="w-10 h-10 rounded-full object-cover cursor-pointer"
+      />
+    );
+  }
+
+  return (
+    <div className="w-10 h-10 rounded-full bg-lime-600 text-white flex items-center justify-center font-semibold cursor-pointer">
+      {initial}
+    </div>
   );
 }

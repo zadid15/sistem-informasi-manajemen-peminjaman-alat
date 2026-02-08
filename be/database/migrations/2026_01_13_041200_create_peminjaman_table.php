@@ -31,20 +31,26 @@ return new class extends Migration
             $table->date('tanggal_pinjam')->nullable();
             $table->date('tanggal_kembali')->nullable();
 
-            $table->string('kondisi_sebelum')->nullable();
-            $table->string('kondisi_sesudah')->nullable();
+            $table->enum('kondisi_sebelum', ['baik', 'rusak_ringan', 'rusak_berat'])->nullable();
+            $table->enum('kondisi_sesudah', ['baik', 'rusak_ringan', 'rusak_berat', 'hilang'])->nullable();
 
             $table->string('foto_sebelum')->nullable();
             $table->string('foto_sesudah')->nullable();
 
             $table->enum('status', [
-                'diajukan',
+                'terkirim',
+                'menunggu_konfirmasi',
+
+                'disetujui',
                 'ditolak',
+
                 'dipinjam',
-                'menunggu_konfirmasi_pengembalian',
+
+                'pengembalian_diajukan',
+
                 'dikembalikan',
-                'dikembalikan_rusak'
-            ])->default('diajukan');
+                'dikembalikan_terlambat'
+            ])->default('terkirim');
 
             $table->date('rencana_pengembalian');
 

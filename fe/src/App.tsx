@@ -35,6 +35,9 @@ import HomePage from './pages/landing/HomePage'
 import { HowToBorrowPage } from './pages/landing/HowToBorrowPage'
 import { AboutPage } from './pages/landing/AboutPage'
 import { EquipmentDetailPage } from './pages/landing/EquipmentDetailPage'
+import { BorrowRequestPage } from './pages/landing/BorrowRequestPage'
+import BorrowingListPage from './pages/landing/BorrowingListPage'
+import BorrowingDetailPage from './pages/landing/BorrowingDetailPage'
 
 export default function App() {
   return (
@@ -48,7 +51,11 @@ export default function App() {
             <Route path="list-peralatan" element={<EquipmentListPage />} />
             <Route path="cara-peminjaman" element={<HowToBorrowPage />} />
             <Route path="tentang-kami" element={<AboutPage />} />
-            <Route path="detail-alat/:id"  element={<EquipmentDetailPage />} />
+            <Route path="detail-alat/:id" element={<EquipmentDetailPage />} />
+            <Route path="form-peminjaman/:id" element={<BorrowRequestPage />} />
+            <Route path="list-peminjaman" element={<BorrowingListPage />} />
+            <Route path="detail-peminjaman/:id" element={<BorrowingDetailPage />} />
+            <Route path='*' element={<NotFoundPage />} key='not-found' />
           </Route>
 
           <Route element={<PublicRoute />}>

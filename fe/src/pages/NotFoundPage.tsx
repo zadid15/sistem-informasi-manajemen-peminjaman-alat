@@ -1,9 +1,8 @@
-import { Link } from "react-router-dom";
 import NotFoundIllustration from "../assets/404.svg";
 
 export default function NotFoundPage() {
     return (
-        <div className="flex flex-col items-center justify-center bg-gray-100 p-6 mt-20">
+        <div className="flex flex-col items-center justify-center p-6 mt-[150px] mb-[50px]">
             <img
                 src={NotFoundIllustration}
                 alt="404 Illustration"
@@ -16,12 +15,6 @@ export default function NotFoundPage() {
                 Maaf, halaman yang kamu cari tidak ada.
             </p>
 
-            <Link
-                to="/dashboard"
-                className="px-4 py-2 md:px-6 md:py-3 bg-green-700 text-sm md:text-lg text-white font-semibold rounded-lg hover:bg-green-800 transition"
-            >
-                Kembali ke Dashboard
-            </Link>
         </div>
     );
 }

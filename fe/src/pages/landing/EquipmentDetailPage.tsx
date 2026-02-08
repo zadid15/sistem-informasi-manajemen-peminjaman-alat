@@ -44,7 +44,7 @@ export function EquipmentDetailPage() {
 
     // Jika sudah login, lanjut ke proses peminjaman
     // Bisa buka modal atau redirect ke halaman form peminjaman
-    navigate(`/peminjaman/${id}/ajukan`);
+    navigate(`/form-peminjaman/${id}`);
   };
 
   if (loading) {

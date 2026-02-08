@@ -19,7 +19,6 @@ return new class extends Migration
             $table->foreignId('id_alat')
                 ->constrained('alat')
                 ->onDelete('cascade');
-            $table->integer('jumlah');
             $table->string('total_denda')->nullable();
             $table->timestamps();
         });
