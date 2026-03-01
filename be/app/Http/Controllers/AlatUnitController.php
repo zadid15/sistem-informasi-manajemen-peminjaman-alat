@@ -6,6 +6,8 @@ use App\Models\Alat;
 use App\Models\AlatUnit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\Storage;
 
 class AlatUnitController extends Controller
 {
@@ -68,19 +70,25 @@ class AlatUnitController extends Controller
                 ->max('nomor_urut') ?? 0;
 
             for ($i = 1; $i <= $data['jumlah_unit']; $i++) {
-
                 $num = $lastNumber + $i;
 
                 $kodeUnit = strtoupper(substr($alat->nama_alat, 0, 3))
                     . '-' . str_pad($num, 3, '0', STR_PAD_LEFT);
 
+                // Generate QR
+                $qrImage = QrCode::size(300)->generate($kodeUnit);
+                $qrPath = 'qrcodes/' . $kodeUnit . '.svg';
+                Storage::disk('public')->put($qrPath, $qrImage);
+                $qrUrl = asset('storage/' . $qrPath);
+
                 $created[] = AlatUnit::create([
-                    'alat_id' => $alat->id,
+                    'alat_id'    => $alat->id,
                     'nomor_urut' => $num,
-                    'kode_unit' => $kodeUnit,
-                    'kondisi' => $data['kondisi'],
-                    'status' => 'Tersedia',
-                    'lokasi' => $data['lokasi'],
+                    'kode_unit'  => $kodeUnit,
+                    'kondisi'    => $data['kondisi'],
+                    'status'     => 'Tersedia',
+                    'lokasi'     => $data['lokasi'],
+                    'qr_code'    => $qrUrl,
                 ]);
             }
 

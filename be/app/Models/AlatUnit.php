@@ -15,6 +15,7 @@ class AlatUnit extends Model
         'status',
         'lokasi',
         'nomor_urut',
+        'qr_code'
     ];
 
     public function alat()

@@ -14,6 +14,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Label } from "../../components/ui/label";
 import { ConfirmDialog } from "../../components/shared/ConfirmDialog";
 import { Badge } from "../../components/ui/badge";
+import { BrowserQRCodeReader } from "@zxing/browser";
+import { QrCode } from "lucide-react";
+import { useRef } from "react";
 
 const KONDISI_OPTIONS: AlatUnitKondisi[] = [
     "Baik",
@@ -56,6 +59,62 @@ export default function UnitManagementPage() {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const navigate = useNavigate();
+
+    const [showScanModal, setShowScanModal] = useState(false);
+    const [highlightedKode, setHighlightedKode] = useState<string | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const controlsRef = useRef<{ stop: () => void } | null>(null);
+
+    const handleScanResult = (kode: string) => {
+        playBeep();
+        setShowScanModal(false);
+        setSearchInput(kode);
+        setSearchParams({ page: "1", search: kode, status: statusFilter });
+        setHighlightedKode(kode);
+        setTimeout(() => setHighlightedKode(null), 3000);
+    };
+
+    const startCamera = async () => {
+        setShowScanModal(true);
+        setTimeout(async () => {
+            if (!videoRef.current) return;
+            const reader = new BrowserQRCodeReader();
+            try {
+                const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
+                    if (result) {
+                        controls.stop();
+                        handleScanResult(result.getText());
+                    }
+                });
+                controlsRef.current = controls;
+            } catch {
+                toast.error("Gagal mengakses kamera");
+            }
+        }, 300);
+    };
+
+    const stopCamera = () => {
+        controlsRef.current?.stop();
+        controlsRef.current = null;
+        setShowScanModal(false);
+    };
+
+    const playBeep = () => {
+        const ctx = new AudioContext();
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        oscillator.type = "sine";
+        oscillator.frequency.value = 880;
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.3);
+    };
 
     const currentPage = Number(searchParams.get("page") || 1);
 
@@ -262,15 +321,25 @@ export default function UnitManagementPage() {
                     <div className="flex-1 relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <Input
-                            placeholder="Cari kode alat..."
+                            placeholder="Cari kode unit atau scan QR..."
                             value={searchInput}
                             onChange={(e) => {
                                 setSearchInput(e.target.value);
                                 setSearchParams({ page: "1", search: e.target.value, status: statusFilter });
                             }}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" && searchInput) {
+                                    setHighlightedKode(searchInput);
+                                    setTimeout(() => setHighlightedKode(null), 3000);
+                                }
+                            }}
                             className="pl-10"
                         />
                     </div>
+                    <Button variant="outline" onClick={startCamera} className="cursor-pointer gap-2">
+                        <QrCode className="w-4 h-4" />
+                        Scan QR
+                    </Button>
                     <Select
                         value={statusFilter}
                         onValueChange={(value) =>
@@ -354,7 +423,13 @@ export default function UnitManagementPage() {
                             </thead>
                             <tbody className="divide-y">
                                 {alatUnit.map((item) => (
-                                    <tr key={item.id} className="hover:bg-gray-50">
+                                    <tr
+                                        key={item.id}
+                                        className={`hover:bg-gray-50 transition-colors ${highlightedKode === item.kode_unit
+                                            ? "bg-yellow-100 ring-2 ring-yellow-400"
+                                            : ""
+                                            }`}
+                                    >
                                         <td className="py-4 px-6">
                                             <p className="text-sm font-medium text-gray-900">{item.kode_unit}</p>
                                         </td>
@@ -562,6 +637,28 @@ export default function UnitManagementPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {showScanModal && (
+                <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-semibold">Scan QR Code</h2>
+                            <button onClick={stopCamera} className="text-gray-500 hover:text-gray-700 cursor-pointer">✕</button>
+                        </div>
+                        <p className="text-sm text-gray-500">Arahkan kamera ke QR code yang tertempel di unit alat.</p>
+                        <div className="rounded-xl overflow-hidden bg-black aspect-square">
+                            <video
+                                ref={videoRef}
+                                className="w-full h-full object-cover"
+                                style={{ transform: "scaleX(-1)" }}
+                            />
+                        </div>
+                        <Button variant="outline" className="w-full cursor-pointer" onClick={stopCamera}>
+                            Batal
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             <ConfirmDialog
                 isOpen={showDeleteDialog}
