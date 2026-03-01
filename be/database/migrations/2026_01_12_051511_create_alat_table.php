@@ -14,16 +14,14 @@ return new class extends Migration
         Schema::create('alat', function (Blueprint $table) {
             $table->id();
             $table->foreignId('id_kategori')->constrained("kategori")->onDelete('cascade');
+
             $table->string('nama_alat');
-            $table->string('kode_alat')->unique();
             $table->string('deskripsi')->nullable();
             $table->string('foto_alat')->nullable();
-            $table->string('kondisi')->nullable();
-            $table->string('lokasi')->nullable();
             $table->integer('harga')->nullable();
             $table->integer('batas_peminjaman')->nullable();
-            $table->string('status');
             $table->json('spesifikasi')->nullable();
+            $table->string('jumlah_unit')->default(1);
             $table->timestamps();
         });
     }

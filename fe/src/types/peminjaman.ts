@@ -1,15 +1,15 @@
-import type { Alat } from "./alat";
-
 export interface BorrowItemPayload {
     id_alat: number;
 }
 
-export interface BorrowRequestPayload {
+export type BorrowRequestPayload = {
     tanggal_pinjam: string;
     rencana_pengembalian: string;
     catatan?: string | null;
-    alat: BorrowItemPayload[];
-}
+    alat: {
+        id_alat_unit: number;
+    }[];
+};
 
 export interface Meta {
     current_page: number;
@@ -18,10 +18,29 @@ export interface Meta {
     last_page: number;
 }
 
-export interface DetailPeminjaman {
+export type DetailPeminjaman = {
     id: number;
-    alat: Alat;
-}
+    id_peminjaman: number;
+    alat_unit_id: number;
+    kondisi_sebelum: string | null;
+    kondisi_sesudah: string | null;
+    total_denda?: string | null;
+    alat_unit: {
+        id: number;
+        kode_unit: string;
+        kondisi: string;
+        lokasi: string;
+        alat: {
+            id: number;
+            nama_alat: string;
+            foto_alat?: string | null;
+            harga?: number;
+            kategori?: { nama_kategori: string };
+            deskripsi?: string;
+            spesifikasi?: { name: string; value: string }[];
+        };
+    };
+};
 
 export interface Peminjaman {
     id: number;

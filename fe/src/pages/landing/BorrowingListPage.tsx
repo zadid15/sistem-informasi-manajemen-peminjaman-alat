@@ -6,6 +6,29 @@ import { EmptyState } from "../../components/shared/EmptyState";
 import { BoxIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import type { StatusPeminjaman } from "../petugas/BorrowingManagementPage";
+
+const statusColors: Record<StatusPeminjaman, string> = {
+    terkirim: 'bg-blue-100 text-blue-800',
+    menunggu_konfirmasi: 'bg-indigo-100 text-indigo-800',
+    disetujui: 'bg-green-100 text-green-800',
+    ditolak: 'bg-red-100 text-red-800',
+    dipinjam: 'bg-yellow-100 text-yellow-800',
+    pengembalian_diajukan: 'bg-purple-100 text-purple-800',
+    dikembalikan: 'bg-gray-100 text-gray-800',
+    dikembalikan_terlambat: 'bg-orange-100 text-orange-800',
+};
+
+const statusLabels: Record<StatusPeminjaman, string> = {
+    terkirim: 'TERKIRIM',
+    menunggu_konfirmasi: 'MENUNGGU KONFIRMASI',
+    disetujui: 'DISETUJUI',
+    ditolak: 'DITOLAK',
+    dipinjam: 'DIPINJAM',
+    pengembalian_diajukan: 'PENGEMBALIAN DIAJUKAN',
+    dikembalikan: 'DIKEMBALIKAN',
+    dikembalikan_terlambat: 'DIKEMBALIKAN TERLAMBAT',
+};
 
 export default function BorrowingListPage() {
     const [data, setData] = useState<Peminjaman[]>([]);
@@ -14,7 +37,6 @@ export default function BorrowingListPage() {
 
     const [page, setPage] = useState(1);
     const [statusFilter, setStatusFilter] = useState("");
-    const [sortBy, setSortBy] = useState("");
 
     useEffect(() => {
         let ignore = false;
@@ -26,7 +48,6 @@ export default function BorrowingListPage() {
                 page,
                 per_page: 5,
                 status: statusFilter || undefined,
-                sort_by: sortBy || undefined,
             });
 
             if (!ignore) {
@@ -43,7 +64,7 @@ export default function BorrowingListPage() {
         load();
 
         return () => { ignore = true; };
-    }, [page, statusFilter, sortBy]);
+    }, [page, statusFilter]);
 
     return (
         <div className="bg-white">
@@ -65,21 +86,6 @@ export default function BorrowingListPage() {
                     <FilterSkeleton />
                 ) : (
                     <div className="flex flex-col md:flex-row gap-4">
-                        <Select
-                            value={sortBy}
-                            onValueChange={(value) => { setPage(1); setSortBy(value); }}
-                        >
-                            <SelectTrigger className="w-full md:w-48 cursor-pointer">
-                                <SelectValue placeholder="Sort By" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="tanggal_pinjam">Tanggal Pinjam</SelectItem>
-                                <SelectItem value="rencana_pengembalian">Rencana Kembali</SelectItem>
-                                <SelectItem value="jumlah_alat">Jumlah Alat</SelectItem>
-                                <SelectItem value="status">Status</SelectItem>
-                            </SelectContent>
-                        </Select>
-
                         <Select
                             value={statusFilter}
                             onValueChange={(value) => { setPage(1); setStatusFilter(value); }}
@@ -109,7 +115,7 @@ export default function BorrowingListPage() {
                         <thead className="bg-lime-800">
                             <tr>
                                 <th className="text-left py-3 px-6 font-semibold text-white rounded-tl-xl">Tanggal Pinjam</th>
-                                <th className="text-left py-3 px-6 font-semibold text-white">Rencana Kembali</th>
+                                <th className="text-left py-3 px-6 font-semibold text-white">Rencana Pengembalian</th>
                                 <th className="text-left py-3 px-6 font-semibold text-white">Jumlah Alat</th>
                                 <th className="text-left py-3 px-6 font-semibold text-white">Status</th>
                                 <th className="text-left py-3 px-6 font-semibold text-white rounded-tr-xl">Aksi</th>
@@ -136,7 +142,9 @@ export default function BorrowingListPage() {
                                     <td className="py-4 px-6">{item.rencana_pengembalian}</td>
                                     <td className="py-4 px-6">{item.detail_peminjaman.length} alat</td>
                                     <td className="py-4 px-6">
-                                        <StatusBadge status={item.status} />
+                                        <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${statusColors[item.status as StatusPeminjaman]}`}>
+                                            {statusLabels[item.status as StatusPeminjaman]}
+                                        </span>
                                     </td>
                                     <td className="py-4 px-6">
                                         <Link
@@ -144,7 +152,7 @@ export default function BorrowingListPage() {
                                             className="inline-flex px-4 py-1 cursor-pointer rounded-full border border-blue-600 text-blue-600
                         bg-blue-50 hover:bg-blue-600 hover:text-white transition"
                                         >
-                                            Detail
+                                            Lihat Detail
                                         </Link>
                                     </td>
                                 </tr>
@@ -200,22 +208,6 @@ export default function BorrowingListPage() {
                 )}
             </div>
         </div>
-    );
-}
-
-function StatusBadge({ status }: { status: string }) {
-    const map: Record<string, string> = {
-        terkirim: "bg-blue-100 text-blue-700",
-        disetujui: "bg-green-100 text-green-700",
-        ditolak: "bg-red-100 text-red-700",
-        dipinjam: "bg-yellow-100 text-yellow-700",
-        dikembalikan: "bg-gray-100 text-gray-700",
-    };
-
-    return (
-        <span className={`px-2 py-1 rounded-full text-normal uppercase font-medium ${map[status] ?? "bg-gray-100 text-gray-700"}`}>
-            {status}
-        </span>
     );
 }
 

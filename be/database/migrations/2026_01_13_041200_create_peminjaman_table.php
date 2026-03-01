@@ -31,9 +31,6 @@ return new class extends Migration
             $table->date('tanggal_pinjam')->nullable();
             $table->date('tanggal_kembali')->nullable();
 
-            $table->enum('kondisi_sebelum', ['baik', 'rusak_ringan', 'rusak_berat'])->nullable();
-            $table->enum('kondisi_sesudah', ['baik', 'rusak_ringan', 'rusak_berat', 'hilang'])->nullable();
-
             $table->string('foto_sebelum')->nullable();
             $table->string('foto_sesudah')->nullable();
 

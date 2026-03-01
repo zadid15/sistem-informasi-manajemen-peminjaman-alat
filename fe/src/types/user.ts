@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'petugas' | 'peminjam';
 export type UserStatus = "aktif" | "nonaktif";
-
+export type UserRoleDashboard = "admin" | "petugas";
 export interface User {
     id: number;
     nama: string;

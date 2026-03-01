@@ -153,8 +153,8 @@ export default function CategoryManagementPage() {
             {/* Page Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Manajemen Kategori</h1>
-                    <p className="text-gray-600 mt-1">Kelola kategori alat</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Manajemen Kategori</h1>
+                    <p className="text-gray-600 text-md mt-1">Kelola kategori alat</p>
                 </div>
                 <Button className="cursor-pointer" onClick={() => setShowAddModal(true)}>
                     <Plus className="w-4 h-4 mr-2" />
@@ -162,7 +162,6 @@ export default function CategoryManagementPage() {
                 </Button>
             </div>
 
-            {/* Categories Grid */}
             {/* Categories Grid */}
             <div className="relative min-h-[60vh]">
                 {loading ? (
@@ -257,6 +256,7 @@ export default function CategoryManagementPage() {
                             <Input
                                 id="image"
                                 type="file"
+                                className="cursor-pointer"
                                 accept="image/*"
                                 onChange={(e) => {
                                     if (e.target.files && e.target.files[0]) {

@@ -46,7 +46,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
         fetchUser();
     }, []);
 
-    const currentPage = location.pathname.split("/").pop() || "dashboard";
+    const currentPage = location.pathname.replace(`/${role}/`, "") || "dashboard";
 
     const onNavigate = (page: string) => navigate(`/${role}/${page}`);
 

@@ -4,16 +4,19 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Log extends Model
+class Cart extends Model
 {
     //
     protected $fillable = [
         'user_id',
-        'aktor',
-        'aktivitas',
-        'ip'
+        'status',
     ];
-    
+
+    public function items()
+    {
+        return $this->hasMany(CartItem::class);
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

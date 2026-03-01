@@ -67,4 +67,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Peminjaman::class, 'approved_by');
     }
+
+    public function carts()
+    {
+        return $this->hasMany(Cart::class);
+    }
+
+    public function cartItems()
+    {
+        return $this->hasManyThrough(CartItem::class, Cart::class);
+    }
 }

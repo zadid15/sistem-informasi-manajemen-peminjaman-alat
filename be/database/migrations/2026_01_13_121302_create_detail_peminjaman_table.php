@@ -16,10 +16,14 @@ return new class extends Migration
             $table->foreignId('id_peminjaman')
                 ->constrained('peminjaman')
                 ->onDelete('cascade');
-            $table->foreignId('id_alat')
-                ->constrained('alat')
+            $table->foreignId('id_alat_unit')
+                ->constrained('alat_unit')
                 ->onDelete('cascade');
             $table->string('total_denda')->nullable();
+            $table->enum('kondisi_sebelum', ['baik', 'rusak_ringan', 'rusak_berat'])->nullable();
+            $table->enum('kondisi_sesudah', ['baik', 'rusak_ringan', 'rusak_berat', 'hilang'])->nullable();
+            $table->string('foto_sebelum')->nullable();
+            $table->string('foto_sesudah')->nullable();
             $table->timestamps();
         });
     }

@@ -1,4 +1,4 @@
-import type { Alat, AlatForm} from "../types/alat";
+import type { Alat, AlatForm } from "../types/alat";
 import axiosInstance from "../utils/axios";
 
 // without login
@@ -90,14 +90,14 @@ export const updateAlat = async (id: number, data: AlatForm) => {
     Object.entries(data).forEach(([key, value]) => {
         if (value === null || value === undefined) return;
 
-        // khusus foto_alat: hanya append kalau File baru
         if (key === "foto_alat") {
             if (value instanceof File) {
                 formDataToSend.append(key, value);
             }
-            // kalau string URL lama, jangan append
+        } else if (key === "spesifikasi") {
+            // Serialize sebagai JSON string, BE parse sebagai array
+            formDataToSend.append(key, JSON.stringify(value));
         } else {
-            // untuk string/number lain
             formDataToSend.append(key, String(value));
         }
     });

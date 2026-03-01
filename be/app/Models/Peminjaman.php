@@ -34,6 +34,11 @@ class Peminjaman extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    public function receiver()
+    {
+        return $this->belongsTo(User::class, 'received_by');
+    }
+
     public function detailPeminjaman(): HasMany
     {
         return $this->hasMany(

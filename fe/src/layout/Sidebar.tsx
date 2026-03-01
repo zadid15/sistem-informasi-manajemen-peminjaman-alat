@@ -4,17 +4,11 @@ import {
     Users,
     Package,
     FolderTree,
-    FileText,
-    RotateCcw,
     Activity,
-    CheckSquare,
-    Eye,
     FileBarChart,
-    List,
     User,
-    // UserCircle,
 } from 'lucide-react';
-import type { UserRole } from '../types/user';
+import type { UserRoleDashboard } from '../types/user';
 import simpa from '../assets/simpa.png';
 
 interface MenuItem {
@@ -25,33 +19,23 @@ interface MenuItem {
 
 interface SidebarProps {
     name: string;
-    role: UserRole;
+    role: UserRoleDashboard;
     avatar?: string | null;
     currentPage: string;
     onNavigate: (page: string) => void;
 }
 
-const menuItems: Record<UserRole, MenuItem[]> = {
+const menuItems: Record<UserRoleDashboard, MenuItem[]> = {
     admin: [
         { icon: LayoutDashboard, label: 'Dashboard', path: 'dashboard' },
         { icon: Users, label: 'Manajemen User', path: 'manajemen-user' },
         { icon: Package, label: 'Manajemen Alat', path: 'manajemen-alat' },
         { icon: FolderTree, label: 'Manajemen Kategori', path: 'manajemen-kategori' },
-        { icon: FileText, label: 'Data Peminjaman', path: 'manajemen-peminjaman' },
-        { icon: RotateCcw, label: 'Data Pengembalian', path: 'manajemen-pengembalian' },
         { icon: Activity, label: 'Log Aktivitas', path: 'manajemen-log' },
     ],
     petugas: [
         { icon: LayoutDashboard, label: 'Dashboard', path: 'dashboard' },
-        { icon: CheckSquare, label: 'Persetujuan Peminjaman', path: 'manajemen-peminjaman' },
-        { icon: Eye, label: 'Monitoring Pengembalian', path: 'manajemen-pengembalian' },
-        { icon: FileBarChart, label: 'Laporan', path: 'manajemen-laporan' },
-    ],
-    peminjam: [
-        { icon: LayoutDashboard, label: 'Dashboard', path: 'dashboard' },
-        { icon: List, label: 'Daftar Alat', path: 'daftar-alat' },
-        { icon: FileText, label: 'Peminjaman Saya', path: 'peminjaman-saya' },
-        { icon: RotateCcw, label: 'Pengembalian', path: 'pengembalian' },
+        { icon: FileBarChart, label: 'Manajemen Peminjaman', path: 'manajemen-peminjaman' },
     ],
 };
 
@@ -65,7 +49,7 @@ export function Sidebar({
     const items = menuItems[role];
 
     return (
-        <aside className="w-64 bg-gray-600 border-r border-gray-600 flex flex-col h-screen sticky top-0">
+        <aside className="w-64 bg-gray-700 border-r border-gray-600 flex flex-col h-screen sticky top-0">
             {/* Logo */}
             <div className="p-6 border-b border-gray-500 flex justify-center">
                 <div className="rounded-lg flex items-center justify-center overflow-hidden">
@@ -78,7 +62,9 @@ export function Sidebar({
                 <ul className="space-y-1">
                     {items.map((item) => {
                         const Icon = item.icon;
-                        const isActive = currentPage === item.path;
+                        const isActive =
+                            currentPage === item.path ||
+                            (item.path === 'manajemen-alat' && currentPage.startsWith('manajemen-alat/'));
 
                         return (
                             <li key={item.path}>
@@ -86,7 +72,7 @@ export function Sidebar({
                                     onClick={() => onNavigate(item.path)}
                                     className={`cursor-pointer w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive
                                         ? 'bg-gray-50 text-gray-700'
-                                        : 'text-gray-100 hover:bg-gray-50 hover:text-gray-700'
+                                        : 'text-gray-100 hover:bg-gray-500 hover:text-gray-100'
                                         }`}
                                 >
                                     <Icon className="w-5 h-5" />

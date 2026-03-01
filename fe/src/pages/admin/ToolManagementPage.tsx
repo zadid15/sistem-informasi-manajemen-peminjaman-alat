@@ -1,6 +1,6 @@
-import { ArrowLeft, ArrowRight, Box, Edit, Eye, MoreVertical, Plus, PlusIcon, Search, Trash, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Box, Edit, Eye, MoreVertical, Package, Plus, PlusIcon, Search, Trash, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "../../components/ui/button";
@@ -30,8 +30,7 @@ import {
     updateAlat,
     deleteAlat,
 } from "../../services/alatService";
-import type { Alat, AlatForm, KondisiAlat, StatusAlat } from "../../types/alat";
-import { Badge } from "../../components/ui/badge";
+import type { Alat, AlatForm } from "../../types/alat";
 import placeholderImg from '../../assets/placeholder.jpg';
 import type { Kategori } from "../../types/kategori";
 import { getKategori } from "../../services/kategoriService";
@@ -45,9 +44,6 @@ export default function ToolManagementPage() {
         current_page: 1,
         last_page: 1,
     });
-
-    console.log(alat);
-
 
     const [searchParams, setSearchParams] = useSearchParams();
     const currentPage = Number(searchParams.get("page") || 1);
@@ -66,16 +62,15 @@ export default function ToolManagementPage() {
     const [previewFoto, setPreviewFoto] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<AlatForm>({
-        kode_alat: "",
         nama_alat: "",
         id_kategori: 0,
         harga: "",
         batas_peminjaman: 0,
-        lokasi: "",
-        kondisi: "",
-        status: "",
+        lokasi_awal: "",
+        kondisi_awal: "",
         deskripsi: "",
         foto_alat: null,
+        jumlah_unit: 1,
         spesifikasi: [
             { name: "", value: "" },
         ],
@@ -183,8 +178,8 @@ export default function ToolManagementPage() {
     }, [formData.foto_alat]);
 
     const handleAdd = async () => {
-        if (!formData.kondisi || !formData.status) {
-            toast.error("Kondisi dan status wajib dipilih");
+        if (!formData.kondisi_awal) {
+            toast.error("Kondisi awal wajib dipilih");
             return;
         }
 
@@ -197,8 +192,7 @@ export default function ToolManagementPage() {
             await createAlat({
                 ...formData,
                 spesifikasi: spesifikasiArray,
-                kondisi: formData.kondisi || undefined,
-                status: formData.status || undefined,
+                kondisi_awal: formData.kondisi_awal || undefined,
             });
 
             toast.success("Alat berhasil ditambahkan");
@@ -213,12 +207,6 @@ export default function ToolManagementPage() {
 
     const handleEdit = async () => {
         if (!selectedAlat) return;
-
-        // Validasi wajib
-        if (!formData.kondisi || !formData.status) {
-            toast.error("Kondisi dan status wajib dipilih");
-            return;
-        }
 
         try {
             // Kirim formData ke updateAlat
@@ -250,16 +238,15 @@ export default function ToolManagementPage() {
 
     const resetForm = () => {
         setFormData({
-            kode_alat: "",
             nama_alat: "",
             id_kategori: 0,
             harga: "",
             batas_peminjaman: 0,
-            lokasi: "",
-            kondisi: "",
-            status: "",
+            lokasi_awal: "",
+            kondisi_awal: "",
             deskripsi: "",
             foto_alat: null,
+            jumlah_unit: 1,
             spesifikasi: [
                 { name: "", value: "" },
             ],
@@ -276,39 +263,13 @@ export default function ToolManagementPage() {
         return new Intl.NumberFormat("id-ID").format(Number(value));
     };
 
-    const statusColors: Record<StatusAlat, string> = {
-        tersedia: 'bg-green-100 text-green-800',
-        'tidak-tersedia': 'bg-gray-100 text-gray-800',
-        dipinjam: 'bg-yellow-100 text-yellow-800',
-        maintenance: 'bg-red-100 text-red-800',
-    };
-
-    const statusLabels: Record<StatusAlat, string> = {
-        tersedia: 'Tersedia',
-        'tidak-tersedia': 'Tidak Tersedia',
-        dipinjam: 'Dipinjam',
-        maintenance: 'Maintenance',
-    };
-
-    const kondisiColors: Record<KondisiAlat, string> = {
-        baik: 'bg-green-100 text-green-800',
-        'rusak-ringan': 'bg-yellow-100 text-yellow-800',
-        'rusak-berat': 'bg-red-100 text-red-800',
-    };
-
-    const kondisiLabels: Record<KondisiAlat, string> = {
-        baik: 'Baik',
-        'rusak-ringan': 'Rusak Ringan',
-        'rusak-berat': 'Rusak Berat',
-    };
-
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Manajemen Alat</h1>
-                    <p className="text-gray-600 mt-1">Kelola alat yang tersedia</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Manajemen Alat</h1>
+                    <p className="text-gray-600 text-md mt-1">Kelola alat yang tersedia</p>
                 </div>
                 <Button onClick={() => {
                     resetForm();
@@ -328,7 +289,7 @@ export default function ToolManagementPage() {
                     <div className="flex-1 relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <Input
-                            placeholder="Cari nama atau kode alat..."
+                            placeholder="Cari nama alat..."
                             value={searchInput}
                             onChange={(e) => {
                                 const value = e.target.value;
@@ -368,28 +329,6 @@ export default function ToolManagementPage() {
                             ))}
                         </SelectContent>
                     </Select>
-                    <Select
-                        value={statusFilter}
-                        onValueChange={(value) =>
-                            setSearchParams({
-                                page: "1",
-                                search: searchQuery,
-                                category: categoryFilter,
-                                status: value,
-                            })
-                        }
-                    >
-                        <SelectTrigger className="w-full md:w-48 cursor-pointer">
-                            <SelectValue placeholder="Semua Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Semua Status</SelectItem>
-                            <SelectItem value="tersedia">Tersedia</SelectItem>
-                            <SelectItem value="tidak-tersedia">Tidak Tersedia</SelectItem>
-                            <SelectItem value="dipinjam">Dipinjam</SelectItem>
-                            <SelectItem value="maintenance">Maintenance</SelectItem>
-                        </SelectContent>
-                    </Select>
                 </div>
             </div>
 
@@ -398,11 +337,11 @@ export default function ToolManagementPage() {
                 {loading ? (
                     /* ================= SKELETON TABLE ================= */
                     <table className="w-full">
-                        <thead className="bg-lime-400 border-b">
+                        <thead className="bg-lime-800 border-b">
                             <tr>
-                                {["Kode", "Nama", "Kategori", "Kondisi", "Status", "Lokasi", "Aksi"].map((_, i) => (
-                                    <th key={i} className="px-6 py-3">
-                                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                                {["Nama Alat", "Kategori", "Harga Per Unit", "Batas Peminjaman", "Jumlah Unit", "Aksi"].map((_, i) => (
+                                    <th key={i} className={`px-6 py-3 ${i === 5 ? "text-right" : ""}`}>
+                                        <div className={`h-4 w-20 bg-gray-200 rounded animate-pulse ${i === 5 ? "ml-auto" : ""}`} />
                                     </th>
                                 ))}
                             </tr>
@@ -413,9 +352,8 @@ export default function ToolManagementPage() {
                                     <td className="px-6 py-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>
                                     <td className="px-6 py-4"><div className="h-4 w-40 bg-gray-200 rounded" /></td>
                                     <td className="px-6 py-4"><div className="h-4 w-32 bg-gray-200 rounded" /></td>
-                                    <td className="px-6 py-4"><div className="h-6 w-24 bg-gray-200 rounded-full" /></td>
-                                    <td className="px-6 py-4"><div className="h-6 w-24 bg-gray-200 rounded-full" /></td>
                                     <td className="px-6 py-4"><div className="h-4 w-32 bg-gray-200 rounded" /></td>
+                                    <td className="px-6 py-4"><div className="h-4 w-12 bg-gray-200 rounded" /></td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="h-8 w-8 bg-gray-200 rounded-md inline-block" />
                                     </td>
@@ -457,23 +395,19 @@ export default function ToolManagementPage() {
                 ) : (
                     <>
                         <table className="w-full">
-                            <thead className="bg-lime-400 border-b">
+                            <thead className="bg-lime-800 border-b">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-sm text-gray-800">Kode</th>
-                                    <th className="px-6 py-3 text-left text-sm text-gray-800">Nama Alat</th>
-                                    <th className="px-6 py-3 text-left text-sm text-gray-800">Kategori</th>
-                                    <th className="px-6 py-3 text-left text-sm text-gray-800">Kondisi</th>
-                                    <th className="px-6 py-3 text-left text-sm text-gray-800">Status</th>
-                                    <th className="px-6 py-3 text-left text-sm text-gray-800">Lokasi</th>
-                                    <th className="px-6 py-3 text-right text-sm text-gray-800">Aksi</th>
+                                    <th className="px-6 py-3 text-left text-md font-semibold text-white">Nama Alat</th>
+                                    <th className="px-6 py-3 text-left text-md font-semibold text-white">Kategori</th>
+                                    <th className="px-6 py-3 text-left text-md font-semibold text-white">Harga Per Unit</th>
+                                    <th className="px-6 py-3 text-left text-md font-semibold text-white">Batas Peminjaman</th>
+                                    <th className="px-6 py-3 text-left text-md font-semibold text-white">Jumlah Unit</th>
+                                    <th className="px-6 py-3 text-right text-md font-semibold text-white">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
                                 {alat.map((item) => (
                                     <tr key={item.id} className="hover:bg-gray-50">
-                                        <td className="py-4 px-6">
-                                            <p className="text-sm font-mono font-medium text-gray-900">{item.kode_alat}</p>
-                                        </td>
                                         <td className="py-4 px-6">
                                             <p className="text-sm font-medium text-gray-900">{item.nama_alat}</p>
                                         </td>
@@ -481,15 +415,15 @@ export default function ToolManagementPage() {
                                             <p className="text-sm text-gray-700">{item.kategori.nama_kategori}</p>
                                         </td>
                                         <td className="py-4 px-6">
-                                            <Badge className={kondisiColors[item.kondisi]}>
-                                                {kondisiLabels[item.kondisi]}
-                                            </Badge>
+                                            <p className="text-sm text-gray-700">
+                                                Rp {formatRupiah(item.harga)}
+                                            </p>
                                         </td>
                                         <td className="py-4 px-6">
-                                            <Badge className={statusColors[item.status]}>{statusLabels[item.status]}</Badge>
+                                            <p className="text-sm text-gray-700">{item.batas_peminjaman} hari</p>
                                         </td>
                                         <td className="py-4 px-6">
-                                            <p className="text-sm text-gray-700">{item.lokasi}</p>
+                                            <p className="text-sm text-gray-700">{item.jumlah_unit} unit</p>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <DropdownMenu>
@@ -499,6 +433,12 @@ export default function ToolManagementPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem asChild className="cursor-pointer">
+                                                        <Link to={`/admin/manajemen-alat/${item.id}/unit`} className="flex items-center">
+                                                            <Package className="w-4 h-4 mr-2" />
+                                                            Manage Unit
+                                                        </Link>
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => openDetailModal(item)} className="cursor-pointer">
                                                         <Eye className="w-4 h-4 mr-2" />
                                                         Detail
@@ -507,21 +447,20 @@ export default function ToolManagementPage() {
                                                         onClick={() => {
                                                             setSelectedAlat(item);
                                                             setFormData({
-                                                                kode_alat: item.kode_alat,
                                                                 nama_alat: item.nama_alat,
                                                                 id_kategori: item.kategori.id,
                                                                 harga: item.harga,
                                                                 batas_peminjaman: item.batas_peminjaman,
-                                                                lokasi: item.lokasi,
-                                                                kondisi: item.kondisi,
-                                                                status: item.status,
+                                                                lokasi_awal: item.lokasi_awal,
+                                                                kondisi_awal: item.kondisi_awal,
                                                                 deskripsi: item.deskripsi,
                                                                 foto_alat: item.foto_alat,
+                                                                jumlah_unit: item.jumlah_unit,
                                                                 spesifikasi:
-                                                                    item.spesifikasi && Object.keys(item.spesifikasi).length > 0
-                                                                        ? Object.entries(item.spesifikasi).map(([key, value]) => ({
-                                                                            name: key,
-                                                                            value: String(value),
+                                                                    Array.isArray(item.spesifikasi) && item.spesifikasi.length > 0
+                                                                        ? item.spesifikasi.map((spec) => ({
+                                                                            name: spec.name || "",
+                                                                            value: String(spec.value || ""),
                                                                         }))
                                                                         : [{ name: "", value: "" }],
                                                             });
@@ -684,18 +623,6 @@ export default function ToolManagementPage() {
                                     </div>
 
                                     <div className="col-span-3">
-                                        <Label>Kode Alat</Label>
-                                        <Input
-                                            placeholder="Contoh: K001"
-                                            className="focus-visible:ring-0"
-                                            value={formData.kode_alat}
-                                            onChange={(e) =>
-                                                setFormData({ ...formData, kode_alat: e.target.value })
-                                            }
-                                        />
-                                    </div>
-
-                                    <div className="col-span-3">
                                         <Label>Harga</Label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2">Rp</span>
@@ -709,6 +636,23 @@ export default function ToolManagementPage() {
                                                     })
                                                 }
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <Label>Batas Peminjaman</Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="text"
+                                                min={1}
+                                                value={formData.batas_peminjaman || ""}
+                                                onChange={(e) => {
+                                                    const value = Number(e.target.value);
+                                                    setFormData({ ...formData, batas_peminjaman: value < 1 ? 1 : value, });
+                                                }}
+                                                className="focus-visible:ring-0"
+                                                placeholder="1" />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"> hari </span>
                                         </div>
                                     </div>
 
@@ -734,66 +678,27 @@ export default function ToolManagementPage() {
                                     </div>
 
                                     <div className="col-span-3">
-                                        <Label>Batas Peminjaman</Label>
-                                        <div className="relative">
-                                            <Input
-                                                type="text"
-                                                min={1}
-                                                value={formData.batas_peminjaman || ""}
-                                                onChange={(e) => {
-                                                    const value = Number(e.target.value);
-                                                    setFormData({ ...formData, batas_peminjaman: value < 1 ? 1 : value, });
-                                                }}
-                                                className="focus-visible:ring-0"
-                                                placeholder="1" />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"> hari </span>
-                                        </div>
-                                    </div>
-
-                                    < div className="col-span-3" >
-                                        <Label>Kondisi</Label>
-                                        <Select
-                                            value={formData.kondisi}
-                                            onValueChange={(value) => setFormData({
-                                                ...formData, kondisi: value as KondisiAlat
-                                            })} >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Pilih kondisi" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="baik">Baik</SelectItem>
-                                                <SelectItem value="rusak-ringan">Rusak Ringan</SelectItem>
-                                                <SelectItem value="rusak-berat">Rusak Berat</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="col-span-3">
-                                        <Label>Status</Label>
-                                        <Select value={formData.status}
-                                            onValueChange={(value) => setFormData({
-                                                ...formData, status: value as StatusAlat
-                                            })} >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Pilih status" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="tersedia">Tersedia</SelectItem>
-                                                <SelectItem value="tidak-tersedia">Tidak Tersedia</SelectItem>
-                                                <SelectItem value="dipinjam">Dipinjam</SelectItem>
-                                                <SelectItem value="maintenence">Maintenence</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <Label>Jumlah Unit</Label>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            className="focus-visible:ring-0"
+                                            value={formData.jumlah_unit}
+                                            onChange={(e) => {
+                                                const value = Number(e.target.value);
+                                                setFormData({ ...formData, jumlah_unit: value < 1 ? 1 : value, });
+                                            }}
+                                            placeholder="Contoh: 1" />
                                     </div>
 
                                     <div className="col-span-6">
-                                        <Label>Lokasi Alat</Label>
+                                        <Label>Lokasi Awal Unit</Label>
                                         <Textarea
                                             className="focus-visible:ring-0"
                                             placeholder="Contoh: Ruang 1"
-                                            value={formData.lokasi}
+                                            value={formData.lokasi_awal}
                                             onChange={(e) =>
-                                                setFormData({ ...formData, lokasi: e.target.value })
+                                                setFormData({ ...formData, lokasi_awal: e.target.value })
                                             }
                                         />
                                     </div>
@@ -950,14 +855,6 @@ export default function ToolManagementPage() {
                                     </div>
 
                                     <div className="col-span-3">
-                                        <Label>Kode Alat</Label>
-                                        <Input
-                                            value={formData.kode_alat}
-                                            onChange={(e) => setFormData({ ...formData, kode_alat: e.target.value })}
-                                        />
-                                    </div>
-
-                                    <div className="col-span-3">
                                         <Label>Harga</Label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2">Rp</span>
@@ -974,23 +871,6 @@ export default function ToolManagementPage() {
                                         </div>
                                     </div>
                                     <div className="col-span-3">
-                                        <Label>Kategori</Label>
-                                        <Select
-                                            value={formData.id_kategori ? String(formData.id_kategori) : undefined}
-                                            onValueChange={(v) => setFormData({ ...formData, id_kategori: Number(v) })}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Pilih kategori" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {kategoriList.map((k) => (
-                                                    <SelectItem key={k.id} value={String(k.id)}>{k.nama_kategori}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="col-span-3">
                                         <Label>Batas Peminjaman</Label>
                                         <div className="relative">
                                             <Input
@@ -1005,44 +885,21 @@ export default function ToolManagementPage() {
                                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">hari</span>
                                         </div>
                                     </div>
-
-                                    <div className="col-span-3">
-                                        <Label>Kondisi</Label>
-                                        <Select
-                                            value={formData.kondisi}
-                                            onValueChange={(v) => setFormData({ ...formData, kondisi: v as KondisiAlat })}
-                                        >
-                                            <SelectTrigger><SelectValue placeholder="Pilih kondisi" /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="baik">Baik</SelectItem>
-                                                <SelectItem value="rusak-ringan">Rusak Ringan</SelectItem>
-                                                <SelectItem value="rusak-berat">Rusak Berat</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="col-span-3">
-                                        <Label>Status</Label>
-                                        <Select
-                                            value={formData.status}
-                                            onValueChange={(v) => setFormData({ ...formData, status: v as StatusAlat })}
-                                        >
-                                            <SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="tersedia">Tersedia</SelectItem>
-                                                <SelectItem value="tidak-tersedia">Tidak Tersedia</SelectItem>
-                                                <SelectItem value="dipinjam">Dipinjam</SelectItem>
-                                                <SelectItem value="maintenance">Maintenance</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
                                     <div className="col-span-6">
-                                        <Label>Lokasi Alat</Label>
-                                        <Textarea
-                                            value={formData.lokasi}
-                                            onChange={(e) => setFormData({ ...formData, lokasi: e.target.value })}
-                                        />
+                                        <Label>Kategori</Label>
+                                        <Select
+                                            value={formData.id_kategori ? String(formData.id_kategori) : undefined}
+                                            onValueChange={(v) => setFormData({ ...formData, id_kategori: Number(v) })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih kategori" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {kategoriList.map((k) => (
+                                                    <SelectItem key={k.id} value={String(k.id)}>{k.nama_kategori}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                             </TabsContent>
@@ -1140,26 +997,9 @@ export default function ToolManagementPage() {
                             {/* Detail */}
                             <div className="md:col-span-2 space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <InfoItem label="Kode Alat" value={selectedAlat.kode_alat} mono />
                                     <InfoItem label="Nama Alat" value={selectedAlat.nama_alat} />
                                     <InfoItem label="Kategori" value={selectedAlat.kategori.nama_kategori} />
-                                    <InfoItem label="Lokasi" value={selectedAlat.lokasi || "-"} />
-
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-500 mb-1">Kondisi</p>
-                                        <Badge className={kondisiColors[selectedAlat.kondisi]}>
-                                            {kondisiLabels[selectedAlat.kondisi]}
-                                        </Badge>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-500 mb-1">Status</p>
-                                        <Badge className={statusColors[selectedAlat.status]}>
-                                            {statusLabels[selectedAlat.status]}
-                                        </Badge>
-                                    </div>
                                 </div>
-
                                 {selectedAlat.deskripsi && (
                                     <div className="space-y-1.5">
                                         <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Deskripsi</p>

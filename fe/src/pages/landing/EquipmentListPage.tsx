@@ -26,8 +26,6 @@ const banners = [
 export function EquipmentListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [statusFilter, setStatusFilter] =
-    useState<"semua" | "tersedia" | "dipinjam">("semua");
 
   const [currentBanner, setCurrentBanner] = useState(0);
 
@@ -69,7 +67,6 @@ export function EquipmentListPage() {
           const res = await getListAlat({
             search: searchQuery,
             kategori: selectedCategory,
-            status: statusFilter,
           });
 
           setAlat(res.alat);
@@ -84,7 +81,7 @@ export function EquipmentListPage() {
     }, 800);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedCategory, statusFilter]);
+  }, [searchQuery, selectedCategory]);
 
   /* ===================== SCROLL RESET ===================== */
   useEffect(() => {
@@ -235,36 +232,6 @@ export function EquipmentListPage() {
             )}
           </div>
 
-          {/* Status Toggle */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => setStatusFilter("semua")}
-              className={`px-5 py-2 rounded-xl font-medium text-sm transition-all cursor-pointer ${statusFilter === "semua"
-                ? "bg-gray-900 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-            >
-              Semua
-            </button>
-            <button
-              onClick={() => setStatusFilter("tersedia")}
-              className={`px-5 py-2 rounded-xl font-medium text-sm transition-all cursor-pointer ${statusFilter === "tersedia"
-                ? "bg-gray-900 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-            >
-              Tersedia
-            </button>
-            <button
-              onClick={() => setStatusFilter("dipinjam")}
-              className={`px-5 py-2 rounded-xl font-medium text-sm transition-all cursor-pointer ${statusFilter === "dipinjam"
-                ? "bg-gray-900 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-            >
-              Dipinjam
-            </button>
-          </div>
         </div>
       </section >
 
@@ -337,15 +304,6 @@ export function EquipmentListPage() {
                       alt={item.nama_alat}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
-                    {/* Status Badge on Image */}
-                    <div
-                      className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${item.status === "tersedia"
-                        ? "bg-lime-400/90 text-gray-900"
-                        : "bg-gray-900/70 text-white"
-                        }`}
-                    >
-                      {item.status === "tersedia" ? "Tersedia" : "Dipinjam"}
-                    </div>
                   </div>
                   <div className="p-6">
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">

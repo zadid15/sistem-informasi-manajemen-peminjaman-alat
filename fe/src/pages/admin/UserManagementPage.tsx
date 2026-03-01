@@ -205,7 +205,6 @@ export default function UserManagementPage() {
         nonaktif: 'bg-red-100 text-red-800',
     }
 
-
     const statusLabels = {
         aktif: 'Aktif',
         nonaktif: 'Tidak Aktif',
@@ -216,8 +215,8 @@ export default function UserManagementPage() {
             {/* Page Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Manajemen User</h1>
-                    <p className="text-gray-600 mt-1">Kelola pengguna sistem</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Manajemen User</h1>
+                    <p className="text-gray-600 text-md mt-1">Kelola pengguna sistem</p>
                 </div>
                 <Button onClick={() => {
                     resetForm();
@@ -237,7 +236,7 @@ export default function UserManagementPage() {
                     <div className="flex-1 relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600" />
                         <Input
-                            placeholder="Cari nama atau email..."
+                            placeholder="Cari nama atau email user ..."
                             value={searchInput}
                             onChange={(e) => {
                                 const value = e.target.value;
@@ -278,12 +277,12 @@ export default function UserManagementPage() {
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 {loading ? (
                     <table className="w-full">
-                        <thead className="bg-lime-400 border-b">
+                        <thead className="bg-lime-800 border-b">
                             <tr>
                                 {['Nama', 'Email', 'Role', 'Nomor Telepon', 'Status', 'Terdaftar', 'Aksi'].map(
                                     (_, i) => (
-                                        <th key={i} className="px-6 py-3">
-                                            <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                                        <th key={i} className={`px-6 py-3 ${i === 6 ? "text-right" : ""}`}>
+                                            <div className={`h-4 w-20 bg-gray-200 rounded animate-pulse ${i === 6 ? "ml-auto" : ""}`} />
                                         </th>
                                     )
                                 )}
@@ -293,27 +292,13 @@ export default function UserManagementPage() {
                         <tbody className="divide-y">
                             {Array.from({ length: 5 }).map((_, row) => (
                                 <tr key={row} className="animate-pulse">
-                                    <td className="px-6 py-4">
-                                        <div className="h-4 w-24 bg-gray-200 rounded" />
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="h-4 w-40 bg-gray-200 rounded" />
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="h-4 w-32 bg-gray-200 rounded" />
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="h-6 w-24 bg-gray-200 rounded-full" />
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="h-6 w-24 bg-gray-200 rounded-full" />
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="h-4 w-32 bg-gray-200 rounded" />
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="h-8 w-8 bg-gray-200 rounded-md inline-block" />
-                                    </td>
+                                    <td className="px-6 py-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>  {/* Nama */}
+                                    <td className="px-6 py-4"><div className="h-4 w-40 bg-gray-200 rounded" /></td>  {/* Email */}
+                                    <td className="px-6 py-4"><div className="h-5 w-16 bg-gray-200 rounded-full" /></td>  {/* Role - badge */}
+                                    <td className="px-6 py-4"><div className="h-4 w-28 bg-gray-200 rounded" /></td>  {/* No. Telepon */}
+                                    <td className="px-6 py-4"><div className="h-5 w-16 bg-gray-200 rounded-full" /></td>  {/* Status - badge */}
+                                    <td className="px-6 py-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>  {/* Terdaftar */}
+                                    <td className="px-6 py-4 text-right"><div className="h-8 w-8 bg-gray-200 rounded-md inline-block" /></td>  {/* Aksi */}
                                 </tr>
                             ))}
                         </tbody>
@@ -354,15 +339,15 @@ export default function UserManagementPage() {
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-lime-400 border-b border-gray-200">
+                            <thead className="bg-lime-800 border-b border-gray-200">
                                 <tr>
-                                    <th className="text-left py-3 px-6 text-sm font-semibold text-gray-800">Nama</th>
-                                    <th className="text-left py-3 px-6 text-sm font-semibold text-gray-800">Email</th>
-                                    <th className="text-left py-3 px-6 text-sm font-semibold text-gray-800">Role</th>
-                                    <th className="text-left py-3 px-6 text-sm font-semibold text-gray-800">No. Telepon</th>
-                                    <th className="text-left py-3 px-6 text-sm font-semibold text-gray-800">Status</th>
-                                    <th className="text-left py-3 px-6 text-sm font-semibold text-gray-800">Terdaftar</th>
-                                    <th className="text-right py-3 px-6 text-sm font-semibold text-gray-800">Aksi</th>
+                                    <th className="text-left py-3 px-6 text-md font-semibold text-white">Nama</th>
+                                    <th className="text-left py-3 px-6 text-md font-semibold text-white">Email</th>
+                                    <th className="text-left py-3 px-6 text-md font-semibold text-white">Role</th>
+                                    <th className="text-left py-3 px-6 text-md font-semibold text-white">No. Telepon</th>
+                                    <th className="text-left py-3 px-6 text-md font-semibold text-white">Status</th>
+                                    <th className="text-left py-3 px-6 text-md font-semibold text-white">Terdaftar</th>
+                                    <th className="text-right py-3 px-6 text-md font-semibold text-white">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">

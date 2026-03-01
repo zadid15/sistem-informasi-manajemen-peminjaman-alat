@@ -10,13 +10,12 @@ export interface Alat {
     nama_alat: string;
     kategori: Kategori;
     deskripsi: string;
-    status: StatusAlat;
     foto_alat: File | string | null;
-    kode_alat: string;
-    kondisi: KondisiAlat;
-    lokasi: string;
+    kondisi_awal: KondisiAlat;
+    lokasi_awal: string;
     harga: string;
     batas_peminjaman: number;
+    jumlah_unit: number;
     spesifikasi: Record<string, string | number>;
 }
 
@@ -26,15 +25,14 @@ export type SpesifikasiPayload = {
 };
 
 export type AlatForm = {
-    kode_alat: string;
     nama_alat: string;
     id_kategori: number;
-    status: StatusAlat | '';
     deskripsi: string;
     foto_alat: File | null | string;
-    kondisi: KondisiAlat | '';
-    lokasi: string;
+    kondisi_awal: KondisiAlat | '';
+    lokasi_awal: string;
     harga: string;
     batas_peminjaman: number;
+    jumlah_unit: number;
     spesifikasi: SpesifikasiPayload[];
 };

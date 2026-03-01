@@ -57,7 +57,7 @@ export default function LoginPage() {
                     navigate("/petugas/dashboard");
                     break;
                 case "peminjam":
-                    navigate("/peminjam/dashboard");
+                    navigate("/");
                     break;
                 default:
                     navigate("/");

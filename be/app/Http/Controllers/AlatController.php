@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Alat;
+use App\Models\AlatUnit;
 use App\Models\Log;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class AlatController extends Controller
@@ -27,32 +28,23 @@ class AlatController extends Controller
                 'nama_alat',
                 'id_kategori',
                 'deskripsi',
-                'status',
                 'foto_alat',
-                'kode_alat',
-                'kondisi',
-                'lokasi',
                 'harga',
                 'batas_peminjaman',
-                'spesifikasi'
+                'spesifikasi',
+                'jumlah_unit'
             );
 
         // filter search
         if (!empty($search)) {
             $query->where(function ($q) use ($search) {
-                $q->where('nama_alat', 'like', "%{$search}%")
-                    ->orWhere('kode_alat', 'like', "%{$search}%");
+                $q->where('nama_alat', 'like', "%{$search}%");
             });
         }
 
         // filter kategori
         if (!empty($kategori) && $kategori !== 'all') {
             $query->where('id_kategori', $kategori);
-        }
-
-        // filter status
-        if (!empty($status) && $status !== 'all') {
-            $query->where('status', $status);
         }
 
         // ambil semua data tanpa paginate
@@ -75,6 +67,7 @@ class AlatController extends Controller
                     : null,
 
                 'spesifikasi' => $alat->spesifikasi ?? [],
+                'jumlah_unit' => $alat->jumlah_unit,
             ];
         });
 
@@ -104,20 +97,16 @@ class AlatController extends Controller
             'nama_alat',
             'id_kategori',
             'deskripsi',
-            'status',
             'foto_alat',
-            'kode_alat',
-            'kondisi',
-            'lokasi',
             'harga',
             'batas_peminjaman',
-            'spesifikasi'
+            'spesifikasi',
+            'jumlah_unit'
         );
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('nama_alat', 'like', "%{$search}%")
-                    ->orWhere('kode_alat', 'like', "%{$search}%");
+                $q->where('nama_alat', 'like', "%{$search}%");
             });
         }
 
@@ -127,19 +116,12 @@ class AlatController extends Controller
             });
         }
 
-        if ($status && $status !== 'all') {
-            $query->where('status', $status);
-        }
-
         $alat = $query->paginate(10);
 
         $alat->getCollection()->transform(function ($alat) {
             return [
                 'id' => $alat->id,
                 'nama_alat' => $alat->nama_alat,
-                'kode_alat' => $alat->kode_alat,
-                'kondisi' => $alat->kondisi,
-                'lokasi' => $alat->lokasi,
                 'harga' => $alat->harga,
                 'batas_peminjaman' => $alat->batas_peminjaman,
                 'kategori' => [
@@ -147,12 +129,12 @@ class AlatController extends Controller
                     'nama_kategori' => $alat->kategori?->nama_kategori
                 ],
                 'deskripsi' => $alat->deskripsi,
-                'status' => $alat->status,
                 'foto_alat' => $alat->foto_alat
                     ? asset('storage/' . $alat->foto_alat)
                     : null,
 
                 'spesifikasi' => $alat->spesifikasi ?? [],
+                'jumlah_unit' => $alat->jumlah_unit,
             ];
         });
 
@@ -176,75 +158,74 @@ class AlatController extends Controller
         $aktor = $request->user();
 
         if (!$aktor || $aktor->role !== 'admin') {
-            return response()->json([
-                'message' => 'Hanya admin yang bisa mengakses.'
-            ], 403);
+            return response()->json(['message' => 'Hanya admin yang bisa mengakses.'], 403);
         }
 
-        $validator = Validator::make($request->all(), [
+        $data = $request->validate([
             'nama_alat' => 'required|string|max:255',
-            'kode_alat' => 'required|string|unique:alat,kode_alat',
             'deskripsi' => 'required|string',
             'foto_alat' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'kondisi' => 'required|string',
             'id_kategori' => 'required|exists:kategori,id',
             'harga' => 'required|integer|min:0',
-            'lokasi' => 'required|string',
             'batas_peminjaman' => 'required|integer|min:0',
-            'status' => 'required|string',
             'spesifikasi' => 'nullable|array',
+
+            'jumlah_unit' => 'required|integer|min:1',
+            'lokasi_awal' => 'required|string',
         ]);
 
-        if ($validator->fails()) {
+        DB::beginTransaction();
+        try {
+
+            // upload foto
+            if ($request->hasFile('foto_alat')) {
+                $file = $request->file('foto_alat');
+                $filename = uniqid('alat_') . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('alat', $filename, 'public');
+                $data['foto_alat'] = $path;
+            }
+
+            // 1️⃣ buat katalog alat
+            $alat = Alat::create([
+                'nama_alat' => $data['nama_alat'],
+                'deskripsi' => $data['deskripsi'],
+                'foto_alat' => $data['foto_alat'] ?? null,
+                'id_kategori' => $data['id_kategori'],
+                'harga' => $data['harga'],
+                'batas_peminjaman' => $data['batas_peminjaman'],
+                'spesifikasi' => $data['spesifikasi'] ?? null,
+                'jumlah_unit' => $data['jumlah_unit'],
+            ]);
+
+            // 2️⃣ generate unit
+            for ($i = 1; $i <= $data['jumlah_unit']; $i++) {
+
+                $kodeUnit = strtoupper(substr($alat->nama_alat, 0, 3))
+                    . '-' . str_pad($i, 3, '0', STR_PAD_LEFT);
+
+                AlatUnit::create([
+                    'alat_id' => $alat->id,
+                    'kode_unit' => $kodeUnit,
+                    'nomor_urut' => $i,
+                    'kondisi' => 'Baik',
+                    'status' => 'Tersedia',
+                    'lokasi' => $data['lokasi_awal'],
+                ]);
+            }
+
+            DB::commit();
+
             return response()->json([
-                'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Alat & unit berhasil dibuat',
+                'alat_id' => $alat->id
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal membuat alat',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $data = $validator->validated();
-
-        // 📸 Upload foto
-        if ($request->hasFile('foto_alat')) {
-            $file = $request->file('foto_alat');
-            $filename = uniqid('alat_') . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('alat', $filename, 'public');
-
-            $data['foto_alat'] = $path; // simpan: alat/alat_xxx.jpg
-        }
-
-        if (isset($data['spesifikasi'])) {
-            $data['spesifikasi'] = $data['spesifikasi']; // Laravel akan otomatis cast ke JSON
-        }
-
-        $alat = Alat::create($data);
-
-        Log::create([
-            'user_id' => $aktor->id,
-            'aktor' => $aktor->nama,
-            'aktivitas' => "Menambah alat: {$alat->nama_alat} (ID: {$alat->id})",
-            'ip' => $request->ip(),
-        ]);
-
-        return response()->json([
-            'message' => 'Alat berhasil ditambahkan',
-            'data' => [
-                'id' => $alat->id,
-                'nama_alat' => $alat->nama_alat,
-                'kode_alat' => $alat->kode_alat,
-                'deskripsi' => $alat->deskripsi,
-                'foto_alat' => $alat->foto_alat
-                    ? asset('storage/' . $alat->foto_alat)
-                    : null,
-                'kondisi' => $alat->kondisi,
-                'id_kategori' => $alat->id_kategori,
-                'harga' => $alat->harga,
-                'lokasi' => $alat->lokasi,
-                'batas_peminjaman' => $alat->batas_peminjaman,
-                'status' => $alat->status,
-                'spesifikasi' => $alat->spesifikasi ?? [],
-            ]
-        ]);
     }
 
     /**
@@ -268,9 +249,6 @@ class AlatController extends Controller
             'data' => [
                 'id'            => $alat->id,
                 'nama_alat'     => $alat->nama_alat,
-                'kode_alat'     => $alat->kode_alat,
-                'kondisi'       => $alat->kondisi,
-                'lokasi'        => $alat->lokasi,
                 'harga'         => $alat->harga,
                 'batas_peminjaman' => $alat->batas_peminjaman,
                 'kategori'      => [
@@ -278,9 +256,9 @@ class AlatController extends Controller
                     'nama_kategori' => $alat->kategori?->nama_kategori
                 ],
                 'deskripsi'     => $alat->deskripsi,
-                'status'        => $alat->status,
                 'foto_alat'     => $alat->foto_alat ? asset('storage/' . $alat->foto_alat) : null,
                 'spesifikasi'   => $alat->spesifikasi ?? [],
+                'jumlah_unit'   => $alat->jumlah_unit,
             ]
         ]);
     }
@@ -294,21 +272,18 @@ class AlatController extends Controller
         $data = [
             'id'            => $alat->id,
             'nama_alat'     => $alat->nama_alat,
-            'kode_alat'     => $alat->kode_alat,
-            'kondisi'       => $alat->kondisi,
-            'lokasi'        => $alat->lokasi,
             'kategori'      => [
                 'id'            => $alat->id_kategori,
                 'nama_kategori' => $alat->kategori?->nama_kategori
             ],
             'deskripsi'     => $alat->deskripsi,
-            'status'        => $alat->status,
             'foto_alat'     => $alat->foto_alat
                 ? asset('storage/' . $alat->foto_alat)
                 : null,
 
             // Ambil data JSON spesifikasi dari database, sama seperti index
             'spesifikasi'   => $alat->spesifikasi ?? [],
+            'jumlah_unit'   => $alat->jumlah_unit,
         ];
 
         return response()->json([
@@ -320,81 +295,99 @@ class AlatController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, $id)
     {
         $aktor = $request->user();
 
         if (!$aktor || $aktor->role !== 'admin') {
-            return response()->json([
-                'message' => 'Hanya admin yang bisa mengakses.'
-            ], 403);
+            return response()->json(['message' => 'Hanya admin yang bisa mengakses.'], 403);
         }
 
-        $alat = Alat::find($id);
+        $alat = Alat::findOrFail($id);
+        $currentUnitCount = $alat->alatUnit()->count();
+        $newUnitCount = (int) $request->input('jumlah_unit');
+        $needsUnitInfo = $newUnitCount > $currentUnitCount;
 
-        if (!$alat) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Alat tidak ditemukan'
-            ], 404);
+        if ($request->has('spesifikasi') && is_string($request->spesifikasi)) {
+            $request->merge([
+                'spesifikasi' => json_decode($request->spesifikasi, true)
+            ]);
         }
 
         $data = $request->validate([
-            'nama_alat' => 'sometimes|required|string|max:255',
-            'kode_alat' => 'sometimes|required|string|unique:alat,kode_alat,' . $id,
-            'deskripsi' => 'sometimes|required|string',
-            'foto_alat' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'kondisi' => 'sometimes|required|string',
-            'id_kategori' => 'sometimes|required|exists:kategori,id',
-            'harga' => 'sometimes|required|integer|min:0',
-            'lokasi' => 'sometimes|required|string',
-            'batas_peminjaman' => 'sometimes|required|integer|min:0',
-            'status' => 'sometimes|required|string',
-            'spesifikasi' => 'nullable|array',
+            'nama_alat'        => 'required|string|max:255',
+            'deskripsi'        => 'nullable|string',
+            'foto_alat'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'id_kategori'      => 'required|exists:kategori,id',
+            'harga'            => 'required|integer|min:0',
+            'batas_peminjaman' => 'required|integer|min:0',
+            'spesifikasi'      => 'nullable|array',
+            'jumlah_unit'      => 'required|integer|min:1',
+            'kondisi_awal'     => ($needsUnitInfo ? 'required' : 'nullable') . '|string',
+            'lokasi_awal'      => ($needsUnitInfo ? 'required' : 'nullable') . '|string',
         ]);
 
-        // 📸 Jika upload foto baru
-        if ($request->hasFile('foto_alat')) {
-            // hapus foto lama
-            if ($alat->foto_alat && Storage::disk('public')->exists($alat->foto_alat)) {
-                Storage::disk('public')->delete($alat->foto_alat);
+        DB::beginTransaction();
+        try {
+            if ($request->hasFile('foto_alat')) {
+                if ($alat->foto_alat && Storage::disk('public')->exists($alat->foto_alat)) {
+                    Storage::disk('public')->delete($alat->foto_alat);
+                }
+
+                $file = $request->file('foto_alat');
+                $filename = uniqid('alat_') . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('alat', $filename, 'public');
+                $data['foto_alat'] = $path;
             }
 
-            $file = $request->file('foto_alat');
-            $filename = uniqid('alat_') . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('alat', $filename, 'public');
+            $alat->update([
+                'nama_alat'        => $data['nama_alat'],
+                'deskripsi'        => $data['deskripsi'] ?? $alat->deskripsi,
+                'foto_alat'        => $data['foto_alat'] ?? $alat->foto_alat,
+                'id_kategori'      => $data['id_kategori'],
+                'harga'            => $data['harga'],
+                'batas_peminjaman' => $data['batas_peminjaman'],
+                'spesifikasi'      => $data['spesifikasi'] ?? $alat->spesifikasi,
+                'jumlah_unit'      => $data['jumlah_unit'],
+            ]);
 
-            $data['foto_alat'] = $path;
+            if ($newUnitCount > $currentUnitCount) {
+                for ($i = $currentUnitCount + 1; $i <= $newUnitCount; $i++) {
+                    $kodeUnit = strtoupper(substr($alat->nama_alat, 0, 3)) . '-' . str_pad($i, 3, '0', STR_PAD_LEFT);
+
+                    AlatUnit::create([
+                        'alat_id'  => $alat->id,
+                        'kode_unit' => $kodeUnit,
+                        'kondisi'  => $data['kondisi_awal'],
+                        'status'   => 'Tersedia',
+                        'lokasi'   => $data['lokasi_awal'],
+                    ]);
+                }
+            } elseif ($newUnitCount < $currentUnitCount) {
+                $unitsToDelete = $alat->alatUnit()
+                    ->where('status', 'Tersedia')
+                    ->latest()
+                    ->take($currentUnitCount - $newUnitCount)
+                    ->get();
+
+                foreach ($unitsToDelete as $unit) {
+                    $unit->delete();
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Alat & unit berhasil diupdate',
+                'alat_id' => $alat->id
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal update alat',
+                'error'   => $e->getMessage()
+            ], 500);
         }
-
-        $alat->update($data);
-
-        Log::create([
-            'user_id' => $aktor->id,
-            'aktor' => $aktor->nama,
-            'aktivitas' => "Mengubah alat: {$alat->nama_alat} (ID: {$alat->id})",
-            'ip' => $request->ip(),
-        ]);
-
-        return response()->json([
-            'message' => 'Alat berhasil diperbarui',
-            'data' => [
-                'id' => $alat->id,
-                'nama_alat' => $alat->nama_alat,
-                'kode_alat' => $alat->kode_alat,
-                'deskripsi' => $alat->deskripsi,
-                'foto_alat' => $alat->foto_alat
-                    ? asset('storage/' . $alat->foto_alat)
-                    : null,
-                'kondisi' => $alat->kondisi,
-                'id_kategori' => $alat->id_kategori,
-                'harga' => $alat->harga,
-                'lokasi' => $alat->lokasi,
-                'batas_peminjaman' => $alat->batas_peminjaman,
-                'status' => $alat->status,
-                'spesifikasi' => $alat->spesifikasi ?? [],
-            ]
-        ]);
     }
 
     /**
