@@ -39,6 +39,7 @@ export default function BorrowingListPage() {
     const [statusFilter, setStatusFilter] = useState("");
 
     useEffect(() => {
+        window.scrollTo(0, 0);
         let ignore = false;
 
         const load = async () => {

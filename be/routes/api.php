@@ -10,6 +10,7 @@ use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\MeController;
+use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\PeminjamanController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,9 @@ Route::post('/check-email', [AuthController::class, 'checkEmail']);
 Route::get('/list-kategori', [KategoriController::class, 'kategoriForUserWithoutLogin']);
 Route::get('/list-alat', [AlatController::class, 'getListAlatForUserWithoudLogin']);
 Route::get('/detail-alat/{id}', [AlatController::class, 'showWithoutLogin']);
+
+// Webhook - tanpa auth middleware!
+Route::post('/webhook/xendit', [PembayaranController::class, 'webhook']);
 
 // Log routes
 Route::get('/logs', [LogController::class, 'index'])->middleware('auth:sanctum');
@@ -86,4 +90,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard Analytics
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/petugas', [DashboardController::class, 'petugas']);
+
+    // Peminjam
+    Route::post('/peminjaman/{id}/buat-invoice', [PembayaranController::class, 'buatInvoice']);
+    Route::get('/peminjaman/{id}/pembayaran', [PembayaranController::class, 'show']);
+
+    // Petugas
+    Route::post('/peminjaman/{id}/konfirmasi-pembayaran', [PembayaranController::class, 'konfirmasiManual']);
 });

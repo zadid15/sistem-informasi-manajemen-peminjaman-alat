@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, PackageCheck } from "lucide-react";
+import { ArrowLeft, PackageCheck, ChevronDown, ExternalLink } from "lucide-react";
 import { getDetailPeminjaman, ajukanPengembalian } from "../../services/peminjamanService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Badge } from "../../components/ui/badge";
@@ -9,6 +9,16 @@ import placeholderImg from '../../assets/placeholder.jpg';
 import { toast } from "sonner";
 import { formatKondisi } from "../../utils/formatKondisi";
 import { Button } from "../../components/ui/button";
+import axiosInstance from "../../utils/axios";
+
+type Pembayaran = {
+    id: number;
+    status: 'pending' | 'lunas' | 'expired' | 'manual';
+    jumlah: number;
+    metode: string | null;
+    xendit_invoice_url: string | null;
+    confirmed_at: string | null;
+};
 
 const TIMELINE_STEPS = [
     { key: "terkirim", label: "Terkirim" },
@@ -19,467 +29,37 @@ const TIMELINE_STEPS = [
     { key: "dikembalikan", label: "Dikembalikan" },
 ];
 
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; ring: string }> = {
+    terkirim: { label: "TERKIRIM", color: "text-blue-700", bg: "bg-blue-50", ring: "ring-blue-200" },
+    menunggu_konfirmasi: { label: "MENUNGGU KONFIRMASI", color: "text-indigo-700", bg: "bg-indigo-50", ring: "ring-indigo-200" },
+    disetujui: { label: "DISETUJUI", color: "text-emerald-700", bg: "bg-emerald-50", ring: "ring-emerald-200" },
+    ditolak: { label: "DITOLAK", color: "text-red-700", bg: "bg-red-50", ring: "ring-red-200" },
+    dipinjam: { label: "DIPINJAM", color: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200" },
+    pengembalian_diajukan: { label: "PENGEMBALIAN DIAJUKAN", color: "text-purple-700", bg: "bg-purple-50", ring: "ring-purple-200" },
+    dikembalikan: { label: "DIKEMBALIKAN", color: "text-gray-700", bg: "bg-gray-100", ring: "ring-gray-200" },
+    dikembalikan_terlambat: { label: "DIKEMBALIKAN TERLAMBAT", color: "text-orange-700", bg: "bg-orange-50", ring: "ring-orange-200" },
+};
+
+const fmt = (n: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
 function getStepIndex(status: string) {
     if (status === "dikembalikan_terlambat") return TIMELINE_STEPS.length - 1;
     return TIMELINE_STEPS.findIndex(step => step.key === status);
 }
 
-export default function BorrowingDetailPage() {
-    const { id } = useParams<{ id: string }>();
-    const [data, setData] = useState<Peminjaman | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [selectedUnit, setSelectedUnit] = useState<DetailPeminjaman["alat_unit"] | null>(null);
-    const [showDetailModal, setShowDetailModal] = useState(false);
-    const [showKonfirmasiModal, setShowKonfirmasiModal] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [checkKondisiBaik, setCheckKondisiBaik] = useState(false);
-    const [checkAdaMasalah, setCheckAdaMasalah] = useState(false);
+// ─── Loading Spinner ──────────────────────────────────────────────────────────
 
-    const checkKonfirmasi = checkKondisiBaik || checkAdaMasalah;
-    const [showKetentuan, setShowKetentuan] = useState(false);
-
-    useEffect(() => {
-        let ignore = false;
-        const load = async () => {
-            setLoading(true);
-            await new Promise(r => setTimeout(r, 500));
-            const res = await getDetailPeminjaman(id!);
-            if (!ignore) {
-                setData(res.data);
-                setLoading(false);
-            }
-        };
-        load();
-        return () => { ignore = true };
-    }, [id]);
-
-    const handleAjukanPengembalian = async () => {
-        if (!checkKonfirmasi) {
-            toast.error("Harap centang konfirmasi terlebih dahulu");
-            return;
-        }
-        setSubmitting(true);
-        try {
-            await ajukanPengembalian(id!);
-            toast.success("Pengembalian berhasil diajukan");
-            setData(prev => prev ? { ...prev, status: "pengembalian_diajukan" } : prev);
-            setShowKonfirmasiModal(false);
-        } catch {
-            toast.error("Gagal mengajukan pengembalian");
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    if (loading) return <BorrowingDetailSkeleton />;
-    if (!data) return <div className="p-6">Data tidak ditemukan</div>;
-
+function LoadingSpinner() {
     return (
-        <div className="min-h-screen bg-white">
-            {/* HEADER */}
-            <section className="pt-36 pb-10 px-6 lg:px-8 bg-gradient-to-b from-gray-50/50 to-white">
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex items-start justify-between gap-6">
-                        <div>
-                            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900">Detail Peminjaman</h1>
-                            <p className="mt-3 text-lg text-gray-600">Informasi lengkap tentang peminjaman alat</p>
-                        </div>
-                        <StatusBadge status={data.status} />
-                    </div>
-                    <BorrowTimeline status={data.status} />
-                </div>
-            </section>
-
-            {/* BACK */}
-            <div className="pb-8 px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
-                    <Link
-                        to="/list-peminjaman"
-                        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium group cursor-pointer"
-                    >
-                        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-                        Kembali ke List Peminjaman
-                    </Link>
-                </div>
-            </div>
-
-            {/* CONTENT */}
-            <div className="p-6">
-                <div className="max-w-7xl mx-auto space-y-8">
-
-                    {/* INFO */}
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <InfoItem label="Tanggal Pinjam" value={data.tanggal_pinjam} />
-                        <InfoItem label="Rencana Pengembalian" value={data.rencana_pengembalian} />
-                        <InfoItem label="Tanggal Dikembalikan" value={data.tanggal_kembali ?? "-"} />
-                        <InfoItem label="Catatan" value={data.catatan ?? "-"} />
-                    </div>
-
-                    {/* ALASAN PENOLAKAN */}
-                    {data.status === "ditolak" && data.alasan_penolakan && (
-                        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
-                            <p className="font-medium mb-1">Alasan Penolakan</p>
-                            <p className="text-sm">{data.alasan_penolakan}</p>
-                        </div>
-                    )}
-
-                    {/* TABEL ALAT */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b font-semibold bg-lime-800 text-white">
-                            Daftar Alat Dipinjam
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-gray-50 text-gray-600">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left">Nama Alat</th>
-                                        <th className="px-6 py-4 text-left">Kode Unit</th>
-                                        <th className="px-6 py-4 text-left">Lokasi</th>
-                                        <th className="px-6 py-4 text-left">Kondisi Awal</th>
-                                        <th className="px-6 py-4 text-left">Kondisi Akhir</th>
-                                        <th className="px-6 py-4 text-left">Harga</th>
-                                        <th className="px-6 py-4 text-left">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {data.detail_peminjaman.map((item: DetailPeminjaman) => (
-                                        <tr key={item.id}>
-                                            <td className="px-6 py-4">{item.alat_unit.alat.nama_alat}</td>
-                                            <td className="px-6 py-4">{item.alat_unit.kode_unit}</td>
-                                            <td className="px-6 py-4">{item.alat_unit.lokasi}</td>
-                                            <td className="px-6 py-4">{formatKondisi(item.kondisi_sebelum) ?? "-"}</td>
-                                            <td className="px-6 py-4">{formatKondisi(item.kondisi_sesudah) ?? "-"}</td>
-                                            <td className="px-6 py-4">
-                                                Rp {item.alat_unit.alat.harga?.toLocaleString() ?? "-"}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="cursor-pointer bg-gray-100 hover:bg-gray-200 rounded-full"
-                                                    onClick={() => {
-                                                        setSelectedUnit(item.alat_unit);
-                                                        setShowDetailModal(true);
-                                                    }}
-                                                >
-                                                    Lihat Detail
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {data.detail_peminjaman.length === 0 && (
-                                        <tr>
-                                            <td colSpan={6} className="px-6 py-6 text-center text-gray-500">Tidak ada alat</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl border overflow-hidden">
-                        <button
-                            onClick={() => setShowKetentuan(prev => !prev)}
-                            className="w-full px-6 py-4 bg-gray-800 text-white font-semibold text-md flex items-center justify-between hover:bg-gray-700 transition cursor-pointer"
-                        >
-                            <span>Ketentuan Denda</span>
-                            <span className={`transition-transform duration-200 ${showKetentuan ? "rotate-180" : ""}`}>▾</span>
-                        </button>
-                        {showKetentuan && (
-                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                                    <p className="text-sm font-semibold text-orange-800 mb-1">⏰ Keterlambatan</p>
-                                    <p className="text-sm text-orange-700"><span className="font-bold">1% dari harga alat per hari</span> keterlambatan.</p>
-                                    <p className="text-xs text-orange-500 mt-1">Contoh: Alat Rp 500.000 terlambat 3 hari → denda Rp 15.000</p>
-                                </div>
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                                    <p className="text-sm font-semibold text-yellow-800 mb-1">🔧 Rusak Ringan</p>
-                                    <p className="text-sm text-yellow-700"><span className="font-bold">25% dari harga alat</span> jika dikembalikan rusak ringan.</p>
-                                    <p className="text-xs text-yellow-500 mt-1">Contoh: Alat Rp 500.000 → denda Rp 125.000</p>
-                                </div>
-                                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                                    <p className="text-sm font-semibold text-red-800 mb-1">💥 Rusak Berat</p>
-                                    <p className="text-sm text-red-700"><span className="font-bold">60% dari harga alat</span> jika dikembalikan rusak berat.</p>
-                                    <p className="text-xs text-red-500 mt-1">Contoh: Alat Rp 500.000 → denda Rp 300.000</p>
-                                </div>
-                                <div className="bg-gray-900 rounded-xl p-4">
-                                    <p className="text-sm font-semibold text-white mb-1">🚫 Hilang</p>
-                                    <p className="text-sm text-gray-300"><span className="font-bold text-white">100% dari harga alat</span> jika alat hilang.</p>
-                                    <p className="text-xs text-gray-400 mt-1">Contoh: Alat Rp 500.000 → denda Rp 500.000</p>
-                                </div>
-                                <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-xl p-4">
-                                    <p className="text-sm font-semibold text-blue-800 mb-1">📋 Denda Kombinasi</p>
-                                    <p className="text-sm text-blue-700">Denda keterlambatan dan kerusakan <span className="font-bold">dijumlahkan</span> apabila keduanya terjadi bersamaan.</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* RINGKASAN DENDA */}
-                    {(data.status === "dikembalikan" || data.status === "dikembalikan_terlambat") && (
-                        (() => {
-                            const itemsWithDenda = data.detail_peminjaman.filter(
-                                item => item.total_denda && Number(item.total_denda) > 0
-                            );
-                            const totalDenda = data.detail_peminjaman.reduce(
-                                (acc, item) => acc + Number(item.total_denda ?? 0), 0
-                            );
-
-                            return totalDenda > 0 ? (
-                                <div className="bg-red-50 border border-red-200 rounded-xl overflow-hidden">
-                                    <div className="px-6 py-4 bg-red-600 text-white font-semibold text-md flex items-center justify-between">
-                                        <span>Rincian Denda</span>
-                                        <span>{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(totalDenda)}</span>
-                                    </div>
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-red-100 text-red-700">
-                                            <tr>
-                                                <th className="px-6 py-3 text-left">Alat</th>
-                                                <th className="px-6 py-3 text-left">Kode Unit</th>
-                                                <th className="px-6 py-3 text-left">Harga Alat</th>
-                                                <th className="px-6 py-3 text-left">Kondisi Saat Dikembalikan</th>
-                                                <th className="px-6 py-3 text-left">Total Denda</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-red-100">
-                                            {itemsWithDenda.map(item => (
-                                                <tr key={item.id}>
-                                                    <td className="px-6 py-4">{item.alat_unit.alat.nama_alat}</td>
-                                                    <td className="px-6 py-4 font-mono">{item.alat_unit.kode_unit}</td>
-                                                    <td className="px-6 py-4 font-semibold text-red-600">
-                                                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(Number(item.alat_unit.alat.harga ?? 0))}
-                                                    </td>
-                                                    <td className="px-6 py-4">{formatKondisi(item.kondisi_sesudah) ?? "-"}</td>
-                                                    <td className="px-6 py-4 font-semibold text-red-600">
-                                                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(Number(item.total_denda))}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot>
-                                            <tr className="bg-red-100">
-                                                <td colSpan={4} className="px-6 py-3 font-bold text-red-800">Total Denda</td>
-                                                <td className="px-6 py-3 font-bold text-red-800">
-                                                    {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(totalDenda)}
-                                                </td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                    <div className="px-6 py-3 bg-red-50 text-xs text-red-600">
-                                        * Denda mencakup kerusakan dan/atau keterlambatan pengembalian
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                                    <span className="text-green-600 text-lg">✓</span>
-                                    <p className="text-sm text-green-700 font-medium">Tidak ada denda — alat dikembalikan dalam kondisi baik dan tepat waktu</p>
-                                </div>
-                            );
-                        })()
-                    )}
-
-                    {/* BUTTON AJUKAN PENGEMBALIAN */}
-                    {data.status === "dipinjam" && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 flex items-center justify-between gap-4">
-                            <div>
-                                <p className="font-semibold text-amber-900">Sudah selesai menggunakan alat?</p>
-                                <p className="text-sm text-amber-700 mt-1">
-                                    Ajukan pengembalian agar petugas dapat memproses dan mengkonfirmasi alat yang dikembalikan.
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    setCheckKondisiBaik(false);
-                                    setCheckAdaMasalah(false);
-                                    setShowKonfirmasiModal(true);
-                                }}
-                                className="flex-shrink-0 flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition cursor-pointer"
-                            >
-                                <PackageCheck size={18} />
-                                Ajukan Pengembalian
-                            </button>
-                        </div>
-                    )}
-
-                    {/* INFO PENGEMBALIAN SUDAH DIAJUKAN */}
-                    {data.status === "pengembalian_diajukan" && (
-                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
-                            <p className="font-semibold text-purple-900">Pengembalian Sedang Diproses</p>
-                            <p className="text-sm text-purple-700 mt-1">
-                                Pengembalian alat sedang menunggu konfirmasi dari petugas. Harap serahkan alat ke petugas terkait.
-                            </p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Modal Detail Unit */}
-            {selectedUnit && (
-                <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-                    <DialogContent className="max-w-3xl">
-                        <DialogHeader>
-                            <DialogTitle>Detail Alat</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                            <div className="md:col-span-2">
-                                <div className="aspect-square w-full overflow-hidden rounded-xl border bg-gray-50 flex items-center justify-center">
-                                    {selectedUnit.alat.foto_alat ? (
-                                        <img
-                                            src={selectedUnit.alat.foto_alat}
-                                            alt={selectedUnit.alat.nama_alat}
-                                            className="h-full w-full object-cover"
-                                            onError={(e) => (e.currentTarget.src = placeholderImg)}
-                                        />
-                                    ) : (
-                                        <span className="text-sm text-gray-400">Tidak ada gambar</span>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="md:col-span-2 space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <InfoItem label="Kode Unit" value={selectedUnit.kode_unit} mono />
-                                    <InfoItem label="Nama Alat" value={selectedUnit.alat.nama_alat} />
-                                    <InfoItem label="Kategori" value={selectedUnit.alat.kategori?.nama_kategori ?? "-"} />
-                                    <InfoItem label="Lokasi" value={selectedUnit.lokasi} />
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-500 mb-1">Kondisi</p>
-                                        <Badge>{selectedUnit.kondisi}</Badge>
-                                    </div>
-                                </div>
-                                {selectedUnit.alat.deskripsi && (
-                                    <div className="space-y-1.5">
-                                        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Deskripsi</p>
-                                        <p className="text-sm text-gray-600 leading-relaxed italic">"{selectedUnit.alat.deskripsi}"</p>
-                                    </div>
-                                )}
-                                {Array.isArray(selectedUnit.alat.spesifikasi) && selectedUnit.alat.spesifikasi.length > 0 && (
-                                    <div className="pt-2">
-                                        <p className="text-xs font-medium text-gray-500 mb-2">Spesifikasi</p>
-                                        <div className="grid grid-cols-1 gap-2 bg-gray-50 p-3 rounded-lg">
-                                            {selectedUnit.alat.spesifikasi.map((spec, index) => (
-                                                <div key={index} className="flex border-b border-gray-200 last:border-0 pb-1 last:pb-0">
-                                                    <span className="text-sm text-gray-500 w-1/3">{spec.name}</span>
-                                                    <span className="text-sm font-semibold text-gray-800 w-2/3">: {spec.value}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            )}
-
-            {/* Modal Konfirmasi Pengembalian */}
-            <Dialog open={showKonfirmasiModal} onOpenChange={(open) => {
-                setShowKonfirmasiModal(open);
-                if (!open) {
-                    setCheckKondisiBaik(false);
-                    setCheckAdaMasalah(false);
-                }
-            }}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Konfirmasi Ajukan Pengembalian</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 pt-2">
-                        <p className="text-sm text-gray-600">
-                            Sebelum mengajukan pengembalian, pastikan hal berikut sudah terpenuhi:
-                        </p>
-
-                        <ul className="text-sm text-gray-700 space-y-2 bg-gray-50 rounded-lg p-4">
-                            {data.detail_peminjaman.map((item) => (
-                                <li key={item.id} className="flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                                    {item.alat_unit.alat.nama_alat} — {item.alat_unit.kode_unit}
-                                </li>
-                            ))}
-                        </ul>
-
-                        <div className="space-y-2">
-                            <label className="flex items-start gap-3 cursor-pointer bg-green-50 border border-green-200 rounded-lg p-3">
-                                <input
-                                    type="checkbox"
-                                    checked={checkKondisiBaik}
-                                    onChange={(e) => {
-                                        setCheckKondisiBaik(e.target.checked);
-                                        if (e.target.checked) setCheckAdaMasalah(false);
-                                    }}
-                                    className="mt-0.5 h-4 w-4 accent-green-600 cursor-pointer"
-                                />
-                                <span className="text-sm text-green-800">
-                                    Semua alat dalam kondisi baik dan siap dikembalikan sesuai dengan yang dipinjam
-                                </span>
-                            </label>
-
-                            <label className="flex items-start gap-3 cursor-pointer bg-red-50 border border-red-200 rounded-lg p-3">
-                                <input
-                                    type="checkbox"
-                                    checked={checkAdaMasalah}
-                                    onChange={(e) => {
-                                        setCheckAdaMasalah(e.target.checked);
-                                        if (e.target.checked) setCheckKondisiBaik(false);
-                                    }}
-                                    className="mt-0.5 h-4 w-4 accent-red-600 cursor-pointer"
-                                />
-                                <span className="text-sm text-red-800">
-                                    Ada alat yang rusak atau hilang — saya siap menanggung denda sesuai ketentuan yang berlaku
-                                </span>
-                            </label>
-
-                            {checkAdaMasalah && (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 space-y-1">
-                                    <p className="font-semibold">Ketentuan denda:</p>
-                                    <p>• Rusak ringan: 25% dari harga alat</p>
-                                    <p>• Rusak berat: 60% dari harga alat</p>
-                                    <p>• Hilang: 100% dari harga alat</p>
-                                    <p>• Terlambat: 1% per hari dari harga alat</p>
-                                    <p className="mt-1 text-red-600 font-medium">Petugas akan menentukan kondisi akhir saat konfirmasi pengembalian.</p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex gap-3 pt-2">
-                            <button
-                                onClick={handleAjukanPengembalian}
-                                disabled={!checkKonfirmasi || submitting}
-                                className="flex-1 py-2.5 cursor-pointer rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {submitting ? "Mengajukan..." : "Ajukan Pengembalian"}
-                            </button>
-                            <button
-                                onClick={() => setShowKonfirmasiModal(false)}
-                                disabled={submitting}
-                                className="flex-1 py-2.5 cursor-pointer rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition"
-                            >
-                                Batal
-                            </button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        </div>
+        <svg className="animate-spin" width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <circle cx="7.5" cy="7.5" r="6" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+            <path d="M7.5 1.5 A6 6 0 0 1 13.5 7.5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        </svg>
     );
 }
 
-function StatusBadge({ status }: { status: string }) {
-    const map: Record<string, string> = {
-        terkirim: "bg-blue-50 text-blue-700 ring-blue-200",
-        menunggu_konfirmasi: "bg-indigo-50 text-indigo-700 ring-indigo-200",
-        disetujui: "bg-green-50 text-green-700 ring-green-200",
-        ditolak: "bg-red-50 text-red-700 ring-red-200",
-        dipinjam: "bg-yellow-50 text-yellow-700 ring-yellow-200",
-        pengembalian_diajukan: "bg-purple-50 text-purple-700 ring-purple-200",
-        dikembalikan: "bg-gray-100 text-gray-700 ring-gray-200",
-        dikembalikan_terlambat: "bg-orange-50 text-orange-700 ring-orange-200",
-    };
-    return (
-        <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold ring-1 ${map[status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}>
-            {status.replaceAll("_", " ").toUpperCase()}
-        </span>
-    );
-}
+// ─── Timeline (versi asli) ────────────────────────────────────────────────────
 
 function BorrowTimeline({ status }: { status: string }) {
     const currentIndex = getStepIndex(status);
@@ -498,7 +78,11 @@ function BorrowTimeline({ status }: { status: string }) {
                     const isActive = index === currentIndex && !isRejected && index !== TIMELINE_STEPS.length - 1;
                     return (
                         <div key={step.key} className="flex-1 flex flex-col items-center z-10 relative group">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-md font-bold shadow-md
+                            {/* Pulse ring — hanya tampil kalau isActive */}
+                            {isActive && (
+                                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-blue-400 opacity-50 animate-ping z-0" />
+                            )}
+                            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-md font-bold shadow-md
                                 ${isRejected && index <= currentIndex ? "bg-red-500 text-white"
                                     : isDone ? "bg-green-500 text-white"
                                         : isActive ? "bg-blue-500 text-white"
@@ -518,31 +102,206 @@ function BorrowTimeline({ status }: { status: string }) {
         </div>
     );
 }
+// ─── Payment Section ──────────────────────────────────────────────────────────
 
-const InfoItem = ({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) => (
-    <div>
-        <p className="text-md font-medium text-gray-500 mb-1">{label}</p>
-        <p className={`text-md text-gray-900 ${mono ? "font-mono" : ""}`}>{value}</p>
-    </div>
-);
+type DendaItem = {
+    id: number;
+    nama: string;
+    kode: string;
+    harga: number;
+    kondisi: string;
+    denda: number;
+};
+
+function PembayaranDendaSection({
+    items,
+    pembayaran,
+    buatInvoiceLoading,
+    onBuatInvoice,
+}: {
+    items: DendaItem[];
+    pembayaran: Pembayaran | null;
+    buatInvoiceLoading: boolean;
+    onBuatInvoice: () => void;
+}) {
+    const totalDenda = items.reduce((acc, i) => acc + i.denda, 0);
+    const statusKey = !pembayaran ? "none" : pembayaran.status;
+    const isDone = statusKey === "lunas" || statusKey === "manual";
+
+    const statusInfo = {
+        none: { label: "Belum Dibayar", color: "text-red-600", bg: "bg-red-50", dot: "bg-red-500" },
+        pending: { label: "Menunggu Pembayaran", color: "text-amber-600", bg: "bg-amber-50", dot: "bg-amber-500" },
+        expired: { label: "Kedaluwarsa", color: "text-gray-500", bg: "bg-gray-50", dot: "bg-gray-400" },
+        lunas: { label: "Lunas", color: "text-emerald-600", bg: "bg-emerald-50", dot: "bg-emerald-500" },
+        manual: { label: "Dikonfirmasi Manual", color: "text-emerald-600", bg: "bg-emerald-50", dot: "bg-emerald-500" },
+    }[statusKey] ?? { label: "-", color: "text-gray-500", bg: "bg-gray-50", dot: "bg-gray-400" };
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                    <p className="text-md font-semibold text-gray-900">Tagihan Denda</p>
+                    <p className="text-sm text-gray-500 mt-0.5">Harap segera diselesaikan</p>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusInfo.bg} ${statusInfo.color}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
+                    {statusInfo.label}
+                </span>
+            </div>
+
+            <div className="divide-y divide-gray-50">
+                {items.map((item) => (
+                    <div key={item.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-md font-medium text-gray-800 truncate">{item.nama}</p>
+                            <p className="text-sm text-gray-400 mt-0.5">{item.kode} · {item.kondisi}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                            <p className="text-md font-bold text-red-600">{fmt(item.denda)}</p>
+                            <p className="text-[12px] text-gray-400">dari {fmt(item.harga)}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-600">Total Tagihan</p>
+                <p className={`text-xl font-bold ${isDone ? "text-emerald-600" : "text-gray-900"}`}>
+                    {fmt(totalDenda)}
+                </p>
+            </div>
+
+            <div className="px-5 py-4">
+                {statusKey === "none" && (
+                    <button
+                        onClick={onBuatInvoice}
+                        disabled={buatInvoiceLoading}
+                        className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        {buatInvoiceLoading ? <><LoadingSpinner />Memproses...</> : "⚡ Bayar Sekarang"}
+                    </button>
+                )}
+                {statusKey === "pending" && (
+                    <button
+                        onClick={() => window.open(pembayaran!.xendit_invoice_url!, '_blank')}
+                        className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        Buka Halaman Pembayaran <ExternalLink size={14} />
+                    </button>
+                )}
+                {statusKey === "expired" && (
+                    <button
+                        onClick={onBuatInvoice}
+                        disabled={buatInvoiceLoading}
+                        className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        {buatInvoiceLoading ? <><LoadingSpinner />Memproses...</> : "Buat Invoice Baru"}
+                    </button>
+                )}
+                {isDone && (
+                    <div className="text-center py-2">
+                        <div className="text-2xl mb-1">✓</div>
+                        <p className="text-sm font-semibold text-emerald-700">Pembayaran Selesai</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            {statusKey === "manual" ? "Dikonfirmasi oleh petugas" : `via ${pembayaran?.metode ?? "—"}`}
+                        </p>
+                    </div>
+                )}
+            </div>
+
+            <div className="px-5 pb-4 text-center">
+                <p className="text-[12px] text-gray-300">Powered by Xendit · Aman & Terenkripsi</p>
+            </div>
+        </div>
+    );
+}
+
+// ─── Info Card ────────────────────────────────────────────────────────────────
+
+function InfoCard({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+    return (
+        <div className="space-y-1">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</p>
+            <p className={`text-sm text-gray-900 font-medium ${mono ? "font-mono" : ""}`}>{value}</p>
+        </div>
+    );
+}
+
+// ─── Kondisi Badge ────────────────────────────────────────────────────────────
+
+function KondisiBadge({ kondisi }: { kondisi: string | null | undefined }) {
+    if (!kondisi || kondisi === "-") return <span className="text-xs text-gray-400">—</span>;
+    const colorMap: Record<string, string> = {
+        baik: "bg-green-100 text-green-700",
+        "rusak ringan": "bg-yellow-100 text-yellow-700",
+        "rusak berat": "bg-red-100 text-red-700",
+        hilang: "bg-gray-900 text-white",
+    };
+    const color = colorMap[kondisi.toLowerCase()] ?? "bg-gray-100 text-gray-600";
+    return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>{kondisi}</span>;
+}
+
+// ─── Ketentuan Denda ──────────────────────────────────────────────────────────
+
+function KetentuanDenda() {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <button
+                onClick={() => setOpen(v => !v)}
+                className="w-full px-5 py-4 flex items-center bg-gray-50 justify-between cursor-pointer hover:bg-gray-200 transition"
+            >
+                <div className="flex items-center gap-2">
+                    <span className="text-md font-semibold text-gray-800">Ketentuan Denda</span>
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">4 jenis</span>
+                </div>
+                <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+            </button>
+
+            {open && (
+                <div className="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-gray-100 pt-4">
+                    {[
+                        { icon: "⏰", label: "Keterlambatan", desc: "1% dari harga alat per hari", example: "Rp 500.000 × 3 hari → Rp 15.000", color: "border-orange-200 bg-orange-50", textColor: "text-orange-800", subColor: "text-orange-500" },
+                        { icon: "🔧", label: "Rusak Ringan", desc: "25% dari harga alat", example: "Rp 500.000 → Rp 125.000", color: "border-yellow-200 bg-yellow-50", textColor: "text-yellow-800", subColor: "text-yellow-500" },
+                        { icon: "💥", label: "Rusak Berat", desc: "60% dari harga alat", example: "Rp 500.000 → Rp 300.000", color: "border-red-200 bg-red-50", textColor: "text-red-800", subColor: "text-red-500" },
+                        { icon: "🚫", label: "Hilang", desc: "100% dari harga alat", example: "Rp 500.000 → Rp 500.000", color: "border-gray-700 bg-gray-900", textColor: "text-white", subColor: "text-gray-400" },
+                    ].map(item => (
+                        <div key={item.label} className={`rounded-lg border p-3.5 ${item.color}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span>{item.icon}</span>
+                                <p className={`text-md font-semibold ${item.textColor}`}>{item.label}</p>
+                            </div>
+                            <p className={`text-sm font-bold ${item.textColor}`}>{item.desc}</p>
+                            <p className={`text-[13px] mt-1 ${item.subColor}`}>{item.example}</p>
+                        </div>
+                    ))}
+                    <div className="sm:col-span-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                        <p className="text-md font-semibold text-blue-800">📋 Denda Kombinasi</p>
+                        <p className="text-sm text-blue-700 mt-1">Denda keterlambatan dan kerusakan dijumlahkan apabila keduanya terjadi bersamaan.</p>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 const Skeleton = ({ className }: { className?: string }) => (
-    <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+    <div className={`animate-pulse bg-gray-200 rounded-md ${className}`} />
 );
 
 function BorrowingDetailSkeleton() {
     return (
-        <div className="min-h-screen bg-white">
-            <section className="pt-36 pb-10 px-6 lg:px-8 bg-gradient-to-b from-gray-50/50 to-white">
-                <div className="max-w-7xl mx-auto space-y-4">
-                    <div className="flex items-start justify-between gap-6">
-                        <div>
-                            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900">Detail Peminjaman</h1>
-                            <p className="mt-3 text-lg text-gray-600">Informasi lengkap tentang peminjaman alat anda</p>
-                        </div>
-                        <Skeleton className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold h-10 w-40" />
+        <div className="min-h-screen bg-gray-50">
+            <div className="bg-white border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-36 pb-6">
+                    <Skeleton className="h-4 w-40 mb-6" />
+                    <div className="flex items-start justify-between gap-4">
+                        <div><Skeleton className="h-12 w-130 mb-2" /></div>
+                        <Skeleton className="h-8 w-36 rounded-full" />
                     </div>
-                    <div className="mt-10 flex justify-between gap-4">
+                    <div className="mt-10 flex justify-between gap-4 pb-2">
                         {Array.from({ length: 6 }).map((_, i) => (
                             <div key={i} className="flex flex-col items-center gap-2 flex-1">
                                 <Skeleton className="w-10 h-10 rounded-full" />
@@ -551,35 +310,482 @@ function BorrowingDetailSkeleton() {
                         ))}
                     </div>
                 </div>
-            </section>
-            <div className="p-6">
-                <div className="max-w-7xl mx-auto space-y-8">
-                    <div className="grid md:grid-cols-2 gap-6">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="space-y-2">
-                                <Skeleton className="h-3 w-24" />
-                                <Skeleton className="h-5 w-40" />
+            </div>
+            <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-5">
+                        <div className="bg-white rounded-xl border border-gray-200 p-5">
+                            <Skeleton className="h-4 w-40 mb-4" />
+                            <div className="grid grid-cols-4 gap-4">
+                                {Array.from({ length: 4 }).map((_, i) => (
+                                    <div key={i}><Skeleton className="h-3 w-20 mb-2" /><Skeleton className="h-4 w-28" /></div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b">
-                            <Skeleton className="h-5 w-40" />
                         </div>
-                        <div className="p-6 space-y-4">
-                            {Array.from({ length: 3 }).map((_, i) => (
-                                <div key={i} className="grid grid-cols-6 gap-4">
-                                    <Skeleton className="h-4 col-span-2" />
-                                    <Skeleton className="h-4" />
-                                    <Skeleton className="h-4" />
-                                    <Skeleton className="h-4" />
-                                    <Skeleton className="h-8 w-20" />
-                                </div>
-                            ))}
+                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                            <div className="px-5 py-4 border-b"><Skeleton className="h-4 w-40" /></div>
+                            <div className="p-5 space-y-3">
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={i} className="grid grid-cols-6 gap-3">
+                                        <Skeleton className="h-4 col-span-2" /><Skeleton className="h-4" /><Skeleton className="h-4" /><Skeleton className="h-4" /><Skeleton className="h-6 w-16 rounded-full" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-5">
+                        <div className="bg-white rounded-xl border border-gray-200 p-5">
+                            <Skeleton className="h-3 w-24 mb-3" /><Skeleton className="h-16 rounded-lg" />
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function BorrowingDetailPage() {
+    const { id } = useParams<{ id: string }>();
+    const [data, setData] = useState<Peminjaman | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [selectedUnit, setSelectedUnit] = useState<DetailPeminjaman["alat_unit"] | null>(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [showKonfirmasiModal, setShowKonfirmasiModal] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [checkKondisiBaik, setCheckKondisiBaik] = useState(false);
+    const [checkAdaMasalah, setCheckAdaMasalah] = useState(false);
+    const checkKonfirmasi = checkKondisiBaik || checkAdaMasalah;
+
+    const [pembayaran, setPembayaran] = useState<Pembayaran | null>(null);
+    const [buatInvoiceLoading, setBuatInvoiceLoading] = useState(false);
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+        let ignore = false;
+        const load = async () => {
+            setLoading(true);
+            await new Promise(r => setTimeout(r, 500));
+            const res = await getDetailPeminjaman(id!);
+            if (!ignore) { setData(res.data); setLoading(false); }
+        };
+        load();
+
+        axiosInstance.get(`/peminjaman/${id}/pembayaran`)
+            .then(res => setPembayaran(res.data.pembayaran))
+            .catch(() => { });
+
+        return () => { ignore = true };
+    }, [id]);
+
+    const handleBuatInvoice = async () => {
+        setBuatInvoiceLoading(true);
+        try {
+            const res = await axiosInstance.post(`/peminjaman/${id}/buat-invoice`);
+            setPembayaran(res.data.pembayaran);
+            window.open(res.data.invoice_url, '_blank');
+        } catch { toast.error("Gagal membuat invoice"); }
+        finally { setBuatInvoiceLoading(false); }
+    };
+
+    const handleAjukanPengembalian = async () => {
+        if (!checkKonfirmasi) { toast.error("Harap centang konfirmasi terlebih dahulu"); return; }
+        setSubmitting(true);
+        try {
+            await ajukanPengembalian(id!);
+            toast.success("Pengembalian berhasil diajukan");
+            setData(prev => prev ? { ...prev, status: "pengembalian_diajukan" } : prev);
+            setShowKonfirmasiModal(false);
+        } catch { toast.error("Gagal mengajukan pengembalian"); }
+        finally { setSubmitting(false); }
+    };
+
+    if (loading) return <BorrowingDetailSkeleton />;
+    if (!data) return <div className="p-6 text-gray-500">Data tidak ditemukan</div>;
+
+    const config = STATUS_CONFIG[data.status];
+    const hasDenda = data.status === "dikembalikan" || data.status === "dikembalikan_terlambat";
+    const dendaItems: DendaItem[] = hasDenda
+        ? data.detail_peminjaman
+            .filter(item => item.total_denda && Number(item.total_denda) > 0)
+            .map(item => ({
+                id: item.id,
+                nama: item.alat_unit.alat.nama_alat,
+                kode: item.alat_unit.kode_unit,
+                harga: Number(item.alat_unit.alat.harga ?? 0),
+                kondisi: formatKondisi(item.kondisi_sesudah) ?? "-",
+                denda: Number(item.total_denda),
+            }))
+        : [];
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+
+            {/* ── TOP HEADER ── */}
+            <div className="bg-white border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-36 pb-6">
+                    <Link
+                        to="/list-peminjaman"
+                        className="inline-flex items-center gap-1.5 text-md text-gray-500 hover:text-gray-800 font-medium group mb-6"
+                    >
+                        <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+                        Kembali ke List Peminjaman
+                    </Link>
+
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Detail Peminjaman ID {data.id}</h1>
+                        </div>
+                        {config && (
+                            <span className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-semibold ring-1 ${config.bg} ${config.color} ${config.ring}`}>
+                                <span className="w-2 h-2 rounded-full bg-current opacity-70" />
+                                {config.label}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Timeline asli */}
+                    <BorrowTimeline status={data.status} />
+                </div>
+            </div>
+
+            {/* ── BODY: 2-COLUMN ── */}
+            <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    {/* ─── LEFT ─── */}
+                    <div className="lg:col-span-2 space-y-5">
+
+                        {/* Info umum */}
+                        <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            {/* Header */}
+                            <div className="bg-green-800 px-5 py-3">
+                                <p className="text-md font-semibold text-white">
+                                    Informasi Peminjaman
+                                </p>
+                            </div>
+
+                            {/* Body */}
+                            <div className="bg-white p-5">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-4">
+                                    <InfoCard label="Tanggal Pinjam" value={data.tanggal_pinjam} />
+                                    <InfoCard label="Rencana Kembali" value={data.rencana_pengembalian} />
+                                    <InfoCard label="Tanggal Dikembalikan" value={data.tanggal_kembali ?? "—"} />
+                                    <InfoCard label="Catatan" value={data.catatan ?? "—"} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Alasan penolakan */}
+                        {data.status === "ditolak" && data.alasan_penolakan && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
+                                <span className="text-red-400 text-lg flex-shrink-0">✕</span>
+                                <div>
+                                    <p className="text-sm font-semibold text-red-800">Alasan Penolakan</p>
+                                    <p className="text-sm text-red-700 mt-1">{data.alasan_penolakan}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tabel alat */}
+                        <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            {/* Header */}
+                            <div className="bg-green-800 px-5 py-3 flex items-center justify-between">
+                                <p className="text-md font-semibold text-white">
+                                    Daftar Alat Dipinjam
+                                </p>
+                                <span className="text-xs bg-white/20 text-white px-2.5 py-1 rounded-full">
+                                    {data.detail_peminjaman.length} item
+                                </span>
+                            </div>
+
+                            {/* Body */}
+                            <div className="bg-white overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-50 border-b border-gray-100">
+                                            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Alat</th>
+                                            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lokasi</th>
+                                            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kondisi Awal</th>
+                                            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kondisi Akhir</th>
+                                            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Harga</th>
+                                            <th className="px-5 py-3" />
+                                        </tr>
+                                    </thead>
+
+                                    <tbody className="divide-y divide-gray-50">
+                                        {data.detail_peminjaman.map((item: DetailPeminjaman, idx: number) => (
+                                            <tr
+                                                key={item.id}
+                                                className={`transition-colors ${idx % 2 === 1 ? "bg-gray-50/40" : "bg-white"
+                                                    } hover:bg-blue-50/30`}
+                                            >
+                                                <td className="px-5 py-3.5">
+                                                    <p className="font-medium text-sm text-gray-900">
+                                                        {item.alat_unit.alat.nama_alat}
+                                                    </p>
+                                                    <p className="text-xs text-gray-400 mt-0.5 font-mono">
+                                                        {item.alat_unit.kode_unit}
+                                                    </p>
+                                                </td>
+
+                                                <td className="px-5 py-3.5 text-gray-500 text-sm">
+                                                    {item.alat_unit.lokasi}
+                                                </td>
+
+                                                <td className="px-5 text-sm py-3.5">
+                                                    <KondisiBadge kondisi={formatKondisi(item.kondisi_sebelum)} />
+                                                </td>
+
+                                                <td className="px-5 text-sm py-3.5">
+                                                    <KondisiBadge kondisi={formatKondisi(item.kondisi_sesudah)} />
+                                                </td>
+
+                                                <td className="px-5 py-3.5 text-gray-700 text-sm font-medium">
+                                                    {item.alat_unit.alat.harga
+                                                        ? fmt(Number(item.alat_unit.alat.harga))
+                                                        : "—"}
+                                                </td>
+
+                                                <td className="px-5 py-3.5">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="cursor-pointer text-sm h-7 px-3 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600"
+                                                        onClick={() => {
+                                                            setSelectedUnit(item.alat_unit);
+                                                            setShowDetailModal(true);
+                                                        }}
+                                                    >
+                                                        Detail
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+
+                                        {data.detail_peminjaman.length === 0 && (
+                                            <tr>
+                                                <td colSpan={6} className="px-5 py-10 text-center text-gray-400 text-sm">
+                                                    Tidak ada alat
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Ketentuan denda */}
+                        <KetentuanDenda />
+                    </div>
+
+                    {/* ─── RIGHT SIDEBAR ─── */}
+                    <div className="space-y-5">
+
+                        {/* Status card */}
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                            <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Status</p>
+                            {config && (
+                                <div className={`rounded-lg p-3.5 ${config.bg}`}>
+                                    <p className={`text-md font-bold ${config.color}`}>{config.label}</p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {data.status === "dipinjam" && "Alat sedang dalam penggunaan"}
+                                        {data.status === "disetujui" && "Silakan ambil alat dari petugas"}
+                                        {data.status === "terkirim" && "Permohonan telah dikirim"}
+                                        {data.status === "menunggu_konfirmasi" && "Menunggu persetujuan petugas"}
+                                        {data.status === "pengembalian_diajukan" && "Menunggu konfirmasi petugas"}
+                                        {data.status === "dikembalikan" && "Proses peminjaman selesai"}
+                                        {data.status === "dikembalikan_terlambat" && "Dikembalikan melebihi batas waktu"}
+                                        {data.status === "ditolak" && "Permohonan tidak disetujui"}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Ajukan pengembalian */}
+                        {data.status === "dipinjam" && (
+                            <div className="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+                                <div className="px-5 py-4 bg-amber-50 border-b border-amber-100">
+                                    <p className="text-sm font-semibold text-amber-900">Selesai menggunakan alat?</p>
+                                    <p className="text-xs text-amber-700 mt-1">Ajukan pengembalian agar petugas dapat memproses konfirmasi.</p>
+                                </div>
+                                <div className="p-4">
+                                    <button
+                                        onClick={() => { setCheckKondisiBaik(false); setCheckAdaMasalah(false); setShowKonfirmasiModal(true); }}
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition cursor-pointer"
+                                    >
+                                        <PackageCheck size={16} />
+                                        Ajukan Pengembalian
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Pengembalian diajukan */}
+                        {data.status === "pengembalian_diajukan" && (
+                            <div className="bg-white rounded-xl border border-purple-200 shadow-sm p-5 flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-purple-600 text-sm">⏳</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-purple-900">Pengembalian Diproses</p>
+                                    <p className="text-xs text-purple-600 mt-1">Serahkan alat ke petugas dan tunggu konfirmasi.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Denda */}
+                        {hasDenda && (
+                            dendaItems.length > 0 ? (
+                                <PembayaranDendaSection
+                                    items={dendaItems}
+                                    pembayaran={pembayaran}
+                                    buatInvoiceLoading={buatInvoiceLoading}
+                                    onBuatInvoice={handleBuatInvoice}
+                                />
+                            ) : (
+                                <div className="bg-white rounded-xl border border-emerald-200 shadow-sm p-5 flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                        <span className="text-emerald-600">✓</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-emerald-800">Tidak Ada Denda</p>
+                                        <p className="text-xs text-emerald-600 mt-1">Alat dikembalikan dalam kondisi baik dan tepat waktu.</p>
+                                    </div>
+                                </div>
+                            )
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* ── MODAL DETAIL UNIT ── */}
+            {selectedUnit && (
+                <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+                    <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle className="text-base">Detail Alat</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-1">
+                            <div className="aspect-square w-full overflow-hidden rounded-xl border bg-gray-50 flex items-center justify-center">
+                                {selectedUnit.alat.foto_alat ? (
+                                    <img
+                                        src={selectedUnit.alat.foto_alat}
+                                        alt={selectedUnit.alat.nama_alat}
+                                        className="h-full w-full object-cover"
+                                        onError={(e) => (e.currentTarget.src = placeholderImg)}
+                                    />
+                                ) : (
+                                    <span className="text-sm text-gray-400">Tidak ada gambar</span>
+                                )}
+                            </div>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <InfoCard label="Kode Unit" value={selectedUnit.kode_unit} mono />
+                                    <InfoCard label="Nama Alat" value={selectedUnit.alat.nama_alat} />
+                                    <InfoCard label="Kategori" value={selectedUnit.alat.kategori?.nama_kategori ?? "—"} />
+                                    <InfoCard label="Lokasi" value={selectedUnit.lokasi} />
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Kondisi</p>
+                                        <Badge>{selectedUnit.kondisi}</Badge>
+                                    </div>
+                                </div>
+                                {selectedUnit.alat.deskripsi && (
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Deskripsi</p>
+                                        <p className="text-sm text-gray-600 leading-relaxed">{selectedUnit.alat.deskripsi}</p>
+                                    </div>
+                                )}
+                                {Array.isArray(selectedUnit.alat.spesifikasi) && selectedUnit.alat.spesifikasi.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Spesifikasi</p>
+                                        <div className="space-y-1.5">
+                                            {selectedUnit.alat.spesifikasi.map((spec, i) => (
+                                                <div key={i} className="flex items-center gap-2 text-xs">
+                                                    <span className="text-gray-400 w-1/3">{spec.name}</span>
+                                                    <span className="text-gray-300">·</span>
+                                                    <span className="text-gray-800 font-medium">{spec.value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {/* ── MODAL KONFIRMASI PENGEMBALIAN ── */}
+            <Dialog open={showKonfirmasiModal} onOpenChange={(open) => {
+                setShowKonfirmasiModal(open);
+                if (!open) { setCheckKondisiBaik(false); setCheckAdaMasalah(false); }
+            }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-base">Konfirmasi Pengembalian</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-1">
+                        <p className="text-sm text-gray-500">Pastikan semua alat berikut sudah siap dikembalikan:</p>
+
+                        <div className="bg-gray-50 rounded-lg p-3.5 space-y-2">
+                            {data.detail_peminjaman.map((item) => (
+                                <div key={item.id} className="flex items-center gap-2 text-sm">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-700 font-medium">{item.alat_unit.alat.nama_alat}</span>
+                                    <span className="text-gray-400 font-mono text-xs">{item.alat_unit.kode_unit}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="flex items-start gap-3 cursor-pointer bg-green-50 border border-green-200 rounded-lg p-3.5 hover:bg-green-100/70 transition">
+                                <input type="checkbox" checked={checkKondisiBaik}
+                                    onChange={(e) => { setCheckKondisiBaik(e.target.checked); if (e.target.checked) setCheckAdaMasalah(false); }}
+                                    className="mt-0.5 h-4 w-4 accent-green-600 cursor-pointer flex-shrink-0"
+                                />
+                                <span className="text-sm text-green-800">Semua alat dalam kondisi baik dan siap dikembalikan</span>
+                            </label>
+
+                            <label className="flex items-start gap-3 cursor-pointer bg-red-50 border border-red-200 rounded-lg p-3.5 hover:bg-red-100/70 transition">
+                                <input type="checkbox" checked={checkAdaMasalah}
+                                    onChange={(e) => { setCheckAdaMasalah(e.target.checked); if (e.target.checked) setCheckKondisiBaik(false); }}
+                                    className="mt-0.5 h-4 w-4 accent-red-600 cursor-pointer flex-shrink-0"
+                                />
+                                <span className="text-sm text-red-800">Ada alat yang rusak atau hilang — saya siap menanggung denda</span>
+                            </label>
+
+                            {checkAdaMasalah && (
+                                <div className="bg-red-50 border border-red-100 rounded-lg p-3.5 text-xs text-red-700 grid grid-cols-2 gap-1.5">
+                                    <span>• Rusak ringan: 25%</span>
+                                    <span>• Rusak berat: 60%</span>
+                                    <span>• Hilang: 100%</span>
+                                    <span>• Terlambat: 1%/hari</span>
+                                    <p className="col-span-2 text-red-500 mt-1">Petugas akan menentukan kondisi akhir.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                            <button
+                                onClick={handleAjukanPengembalian}
+                                disabled={!checkKonfirmasi || submitting}
+                                className="flex-1 py-2.5 cursor-pointer rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                {submitting ? "Mengajukan..." : "Ajukan Pengembalian"}
+                            </button>
+                            <button
+                                onClick={() => setShowKonfirmasiModal(false)}
+                                disabled={submitting}
+                                className="flex-1 py-2.5 cursor-pointer rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition"
+                            >
+                                Batal
+                            </button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

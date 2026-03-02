@@ -39,6 +39,11 @@ class Peminjaman extends Model
         return $this->belongsTo(User::class, 'received_by');
     }
 
+    public function pembayaran()
+    {
+        return $this->hasOne(Pembayaran::class, 'peminjaman_id');
+    }
+
     public function detailPeminjaman(): HasMany
     {
         return $this->hasMany(
