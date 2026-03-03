@@ -209,7 +209,7 @@ export function EquipmentDetailPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             <div className="lg:col-span-5">
-              <div className="sticky top-32 space-y-6">
+              <div className="space-y-6">
                 <div className="aspect-square bg-gray-50 rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-2xl shadow-gray-200/50">
                   <ImageWithFallback
                     src={alat.foto_alat instanceof File ? URL.createObjectURL(alat.foto_alat) : alat.foto_alat ?? undefined}
