@@ -5,19 +5,22 @@ import axiosInstance from "../utils/axios";
 export const getListAlat = async (params?: {
     search?: string;
     kategori?: number | null;
-    status?: "semua" | "tersedia" | "dipinjam";
+    page?: number;
+    per_page?: number;
 }) => {
     const res = await axiosInstance.get("/list-alat", {
         params: {
             search: params?.search,
             kategori: params?.kategori,
-            status: params?.status === "semua" ? undefined : params?.status,
+            page: params?.page ?? 1,
+            per_page: params?.per_page ?? 12,
         },
     });
 
     return {
-        alat: res.data.data as Alat[],
+        alat: res.data.alat as Alat[],
         message: res.data.message,
+        nextPage: res.data.next_page as number | null,
     };
 };
 
@@ -112,4 +115,14 @@ export const updateAlat = async (id: number, data: AlatForm) => {
 export const deleteAlat = async (id: number) => {
     const res = await axiosInstance.delete(`/alat/${id}`);
     return res.data;
+};
+
+export const getAlatPopuler = async (limit = 4) => {
+    const res = await axiosInstance.get("/alat-populer", {
+        params: { limit },
+    });
+    return {
+        alat: res.data.alat as Alat[],
+        message: res.data.message,
+    };
 };

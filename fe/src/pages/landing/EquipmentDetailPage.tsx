@@ -6,8 +6,6 @@ import { showAlat } from "../../services/alatService";
 import type { Alat } from "../../types/alat";
 import { toast } from "sonner";
 import { addToCart } from "../../services/cartService";
-// import { Badge } from "../../components/ui/badge";
-// import { kondisiColors } from "../../types/coloringBadge";
 
 type AlatUnit = {
   id: number;
@@ -148,8 +146,10 @@ export function EquipmentDetailPage() {
           state: { batas_peminjaman: alat.batas_peminjaman ?? 7 }
         });
       }
-    } catch {
-      toast.error("Gagal memuat unit alat");
+    } catch (error) {
+      setDialogType("warning");
+      setDialogMessage(typeof error === "string" ? error : "Gagal memuat unit alat");
+      setDialogOpen(true);
     }
   };
 
@@ -187,7 +187,7 @@ export function EquipmentDetailPage() {
 
   return (
     <div className="bg-white min-h-screen">
-      <section className="pt-36 pb-12 px-6 lg:px-8 bg-gradient-to-b from-gray-50/50 to-white">
+      <section className="pt-52 pb-12 px-6 lg:px-8 bg-gradient-to-b from-gray-50/50 to-white">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Detail Peralatan</h1>
           <p className="text-lg text-gray-600">
@@ -214,7 +214,7 @@ export function EquipmentDetailPage() {
                   <ImageWithFallback
                     src={alat.foto_alat instanceof File ? URL.createObjectURL(alat.foto_alat) : alat.foto_alat ?? undefined}
                     alt={alat.nama_alat}
-                    className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
+                    className="w-full h-full object-cover transform transition-transform duration-700"
                   />
                 </div>
               </div>
@@ -228,6 +228,17 @@ export function EquipmentDetailPage() {
                   </span>
                 </div>
                 <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">{alat.nama_alat}</h1>
+
+                {/* Tambahkan ini */}
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${(alat.unit_tersedia ?? 0) > 0
+                      ? "bg-lime-50 text-lime-700"
+                      : "bg-red-50 text-red-600"
+                    }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${(alat.unit_tersedia ?? 0) > 0 ? "bg-lime-500" : "bg-red-500"}`} />
+                    {(alat.unit_tersedia ?? 0) > 0 ? `${alat.unit_tersedia} unit tersedia` : "Tidak tersedia"}
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-4">

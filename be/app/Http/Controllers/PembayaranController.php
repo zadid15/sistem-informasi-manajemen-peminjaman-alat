@@ -19,6 +19,21 @@ class PembayaranController extends Controller
         Configuration::setXenditKey(config('services.xendit.secret_key'));
     }
 
+    private function selesaikanPeminjaman(Pembayaran $pembayaran): void
+    {
+        $peminjaman = Peminjaman::find($pembayaran->peminjaman_id);
+        if (!$peminjaman || $peminjaman->status !== 'menunggu_pembayaran') return;
+
+        $isTerlambat = $peminjaman->is_terlambat ?? (
+            $peminjaman->tanggal_kembali && $peminjaman->rencana_pengembalian &&
+            Carbon::parse($peminjaman->tanggal_kembali)->gt(Carbon::parse($peminjaman->rencana_pengembalian))
+        );
+
+        $peminjaman->update([
+            'status' => $isTerlambat ? 'dikembalikan_terlambat' : 'dikembalikan',
+        ]);
+    }
+
     // Buat invoice Xendit
     public function buatInvoice(Request $request, $peminjamanId)
     {
@@ -27,7 +42,7 @@ class PembayaranController extends Controller
         $peminjaman = Peminjaman::with(['user', 'detailPeminjaman'])
             ->where('id', $peminjamanId)
             ->where('id_user', $aktor->id)
-            ->whereIn('status', ['dikembalikan', 'dikembalikan_terlambat'])
+            ->whereIn('status', ['dikembalikan', 'dikembalikan_terlambat', 'menunggu_pembayaran'])
             ->firstOrFail();
 
         // Hitung total denda
@@ -123,6 +138,7 @@ class PembayaranController extends Controller
                         'status' => 'lunas',
                         'metode' => strtolower($data['payment_method'] ?? 'unknown'),
                     ]);
+                    $this->selesaikanPeminjaman($pembayaran);
                     DB::commit();
                     Log::info('Status updated to lunas');
                 } catch (\Exception $e) {
@@ -153,7 +169,7 @@ class PembayaranController extends Controller
             'catatan'        => 'nullable|string',
         ]);
 
-        $peminjaman = Peminjaman::whereIn('status', ['dikembalikan', 'dikembalikan_terlambat'])
+        $peminjaman = Peminjaman::whereIn('status', ['dikembalikan', 'dikembalikan_terlambat', 'menunggu_pembayaran'])
             ->findOrFail($peminjamanId);
 
         $pembayaran = Pembayaran::firstOrCreate(
@@ -162,7 +178,7 @@ class PembayaranController extends Controller
                 'user_id' => $peminjaman->id_user,
                 'jumlah'  => $peminjaman->detailPeminjaman->sum('total_denda'),
                 'status'  => 'pending',
-                'metode'  => 'manual',
+                'metode'  => 'tunai',
             ]
         );
 
@@ -174,12 +190,14 @@ class PembayaranController extends Controller
 
         $pembayaran->update([
             'status'         => 'manual',
-            'metode'         => 'manual',
+            'metode'         => 'tunai', 
             'bukti_transfer' => $buktiPath,
             'confirmed_by'   => $aktor->id,
             'confirmed_at'   => now(),
             'catatan'        => $data['catatan'] ?? null,
         ]);
+
+        $this->selesaikanPeminjaman($pembayaran);
 
         return response()->json([
             'message'    => 'Pembayaran dikonfirmasi secara manual',

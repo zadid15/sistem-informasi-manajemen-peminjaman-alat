@@ -42,11 +42,6 @@ class Alat extends Model
         return $this->hasMany(AlatUnit::class, 'alat_id');
     }
 
-    // public function detailPeminjaman()
-    // {
-    //     return $this->hasMany(DetailPeminjaman::class, 'id_alat');
-    // }
-
     public function cartItems()
     {
         return $this->hasMany(CartItem::class, 'alat_id');

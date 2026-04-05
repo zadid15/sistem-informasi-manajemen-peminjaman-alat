@@ -17,6 +17,7 @@ import { Badge } from "../../components/ui/badge";
 import { BrowserQRCodeReader } from "@zxing/browser";
 import { QrCode } from "lucide-react";
 import { useRef } from "react";
+import QRCode from "qrcode";
 
 const KONDISI_OPTIONS: AlatUnitKondisi[] = [
     "Baik",
@@ -24,7 +25,7 @@ const KONDISI_OPTIONS: AlatUnitKondisi[] = [
     "Perlu Perawatan",
     "Rusak Ringan",
     "Rusak Berat",
-    "Dalam Service",
+    "Dalam Servis",
     "Tidak Layak Pakai",
 ];
 
@@ -64,6 +65,13 @@ export default function UnitManagementPage() {
     const [highlightedKode, setHighlightedKode] = useState<string | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const controlsRef = useRef<{ stop: () => void } | null>(null);
+    const downloadQR = async (kode: string) => {
+        const url = await QRCode.toDataURL(kode, { width: 512, margin: 2 });
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `QR-${kode}.png`;
+        a.click();
+    };
 
     const handleScanResult = (kode: string) => {
         playBeep();
@@ -234,7 +242,7 @@ export default function UnitManagementPage() {
         "Perlu Perawatan": "bg-yellow-500 text-white text-sm",
         "Rusak Ringan": "bg-orange-500 text-white text-sm",
         "Rusak Berat": "bg-red-700 text-white text-sm",
-        "Dalam Service": "bg-purple-700 text-white text-sm",
+        "Dalam Servis": "bg-purple-700 text-white text-sm",
         "Tidak Layak Pakai": "bg-gray-700 text-white text-sm",
     };
 
@@ -454,6 +462,12 @@ export default function UnitManagementPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        className="cursor-pointer"
+                                                        onClick={() => downloadQR(item.kode_unit)}
+                                                    >
+                                                        <QrCode className="w-4 h-4 mr-2" /> Download QR
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         className={item.status !== "Tersedia" ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer"}
                                                         onClick={() => {

@@ -1,4 +1,4 @@
-export type AlatUnitKondisi = 'Baik' | 'Layak Pakai' | 'Perlu Perawatan' | 'Rusak Ringan' | 'Rusak Berat' | 'Dalam Service' | 'Tidak Layak Pakai';
+export type AlatUnitKondisi = 'Baik' | 'Layak Pakai' | 'Perlu Perawatan' | 'Rusak Ringan' | 'Rusak Berat' | 'Dalam Servis' | 'Tidak Layak Pakai';
 
 export type AlatUnitStatus = 'Tersedia' | 'Dipinjam' | 'Tidak Tersedia';
 

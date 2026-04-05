@@ -126,7 +126,7 @@ export function Navbar() {
 
   return (
     <nav
-      className={`fixed top-6 left-1/2 -translate-x-1/2 z-50
+      className={`fixed top-18 left-1/2 -translate-x-1/2 z-50
   w-[92%] max-w-5xl
   transition-all duration-300
   rounded-full

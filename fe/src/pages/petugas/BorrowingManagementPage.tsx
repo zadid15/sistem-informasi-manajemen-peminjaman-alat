@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Calendar, Eye, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Eye, Printer, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/shared/EmptyState";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Badge } from "../../components/ui/badge";
 import { getPeminjaman } from "../../services/peminjamanService";
+import CetakLaporanModal from "./CetakLaporanModal";
 
 export type StatusPeminjaman =
     | 'terkirim'
@@ -17,6 +18,7 @@ export type StatusPeminjaman =
     | 'ditolak'
     | 'dipinjam'
     | 'pengembalian_diajukan'
+    | 'menunggu_pembayaran'
     | 'dikembalikan'
     | 'dikembalikan_terlambat';
 
@@ -60,6 +62,7 @@ const statusColors: Record<StatusPeminjaman, string> = {
     pengembalian_diajukan: 'bg-purple-100 text-purple-800 text-sm',
     dikembalikan: 'bg-gray-100 text-gray-800 text-sm',
     dikembalikan_terlambat: 'bg-orange-100 text-orange-800 text-sm',
+    menunggu_pembayaran: 'bg-orange-300 text-orange-800',
 };
 
 const statusLabels: Record<StatusPeminjaman, string> = {
@@ -71,6 +74,7 @@ const statusLabels: Record<StatusPeminjaman, string> = {
     pengembalian_diajukan: 'PENGEMBALIAN DIAJUKAN',
     dikembalikan: 'DIKEMBALIKAN',
     dikembalikan_terlambat: 'DIKEMBALIKAN TERLAMBAT',
+    menunggu_pembayaran: 'MENUNGGU PEMBAYARAN',
 };
 
 export default function BorrowingManagementPage() {
@@ -91,6 +95,8 @@ export default function BorrowingManagementPage() {
     const [searchInput, setSearchInput] = useState(searchQuery);
     const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
     const navigate = useNavigate();
+
+    const [showCetakModal, setShowCetakModal] = useState(false);
 
     useEffect(() => {
         const handler = setTimeout(() => setDebouncedSearch(searchInput), 500);
@@ -132,9 +138,14 @@ export default function BorrowingManagementPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-gray-900">Manajemen Peminjaman</h1>
-                <p className="text-gray-600 text-md mt-1">Kelola peminjaman alat oleh pengguna</p>
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">Manajemen Peminjaman</h1>
+                    <p className="text-gray-600 text-md mt-1">Kelola peminjaman alat oleh pengguna</p>
+                </div>
+                <Button className="cursor-pointer bg-lime-800 hover:bg-lime-700" onClick={() => setShowCetakModal(true)}>
+                    <Printer className="w-4 h-4 mr-2" /> Cetak Laporan
+                </Button>
             </div>
 
             {/* Search & Filter */}
@@ -310,8 +321,8 @@ export default function BorrowingManagementPage() {
                         </div>
                     </>
                 )}
+                <CetakLaporanModal open={showCetakModal} onClose={() => setShowCetakModal(false)} />
             </div>
-
         </div>
     );
 }

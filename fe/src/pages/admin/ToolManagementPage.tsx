@@ -961,8 +961,8 @@ export default function ToolManagementPage() {
                     </Tabs>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowEditModal(false)}>Batal</Button>
-                        <Button onClick={handleEdit}>Simpan Perubahan</Button>
+                        <Button className="cursor-pointer" variant="outline" onClick={() => setShowEditModal(false)}>Batal</Button>
+                        <Button className="cursor-pointer" onClick={handleEdit}>Simpan Perubahan</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -132,11 +132,15 @@ export default function CartPage() {
 
     if (loading) {
         return (
-            <div className="pt-[150px]">
-                <section className="pb-12 px-6 lg:px-8 bg-gradient-to-b from-gray-50/50 to-white animate-pulse">
+            <div className="pt-[200px]">
+                <section className="pb-12 px-6 lg:px-8 bg-gradient-to-b from-gray-50/50 to-white">
                     <div className="max-w-7xl mx-auto">
-                        <div className="h-12 w-1/3 bg-gray-200 rounded mb-4" />
-                        <div className="h-6 w-1/2 bg-gray-200 rounded" />
+                        <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+                            Keranjang Saya
+                        </h1>
+                        <p className="text-lg text-gray-600">
+                            Belum ada alat di keranjangmu, ayo tambahkan alat yang ingin dipinjam!
+                        </p>
                     </div>
                 </section>
                 <div className="px-6 lg:px-8">
@@ -158,7 +162,7 @@ export default function CartPage() {
 
     if (items.length === 0) {
         return (
-            <div className="pt-[150px]">
+            <div className="pt-[200px]">
                 <section className="pb-12 px-6 lg:px-8 bg-gradient-to-b from-gray-50/50 to-white">
                     <div className="max-w-7xl mx-auto">
                         <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Keranjang Saya</h1>
@@ -180,7 +184,7 @@ export default function CartPage() {
     }
 
     return (
-        <div className="pt-[150px]">
+        <div className="pt-[200px]">
             {/* Header */}
             <section className="pb-12 px-6 lg:px-8 bg-gradient-to-b from-gray-50/50 to-white">
                 <div className="max-w-7xl mx-auto">
@@ -233,12 +237,12 @@ export default function CartPage() {
                                             : undefined
                                         }
                                         alt={group.alat.nama_alat}
-                                        className="w-14 h-14 object-cover rounded-lg bg-gray-100 flex-shrink-0"
+                                        className="w-16 h-16 object-cover rounded-lg bg-gray-100 flex-shrink-0"
                                         onError={(e) => { e.currentTarget.style.display = "none"; }}
                                     />
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-gray-900 truncate">{group.alat.nama_alat}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">
+                                        <p className="font-semibold text-lg text-gray-900 truncate">{group.alat.nama_alat}</p>
+                                        <p className="text-sm text-gray-400 mt-0.5">
                                             {group.units.length} unit di keranjang
                                             {groupSelectedCount > 0 && (
                                                 <span className="ml-1 text-lime-600 font-medium">
@@ -250,7 +254,7 @@ export default function CartPage() {
                                     <button
                                         disabled={syncing}
                                         onClick={() => setGroupToDelete(group)}
-                                        className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 disabled:opacity-50 cursor-pointer px-2 py-1 rounded-lg hover:bg-red-50 transition flex-shrink-0"
+                                        className="flex items-center gap-1 text-sm text-red-400 hover:text-red-600 disabled:opacity-50 cursor-pointer px-2 py-1 rounded-lg hover:bg-red-50 transition flex-shrink-0"
                                     >
                                         <Trash2 size={14} />
                                         <span>Hapus semua</span>
@@ -269,8 +273,8 @@ export default function CartPage() {
                                                 className="h-4 w-4 accent-gray-900 cursor-pointer flex-shrink-0"
                                             />
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-gray-800">{item.alat_unit.kode_unit}</p>
-                                                <p className="text-xs text-gray-400">{item.alat_unit.lokasi}</p>
+                                                <p className="text-md font-medium text-gray-800">{item.alat_unit.kode_unit}</p>
+                                                <p className="text-sm text-gray-400">{item.alat_unit.lokasi}</p>
                                             </div>
                                             <button
                                                 disabled={syncing}

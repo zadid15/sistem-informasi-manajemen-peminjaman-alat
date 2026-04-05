@@ -38,6 +38,9 @@ import SettingUserPage from './pages/landing/SettingUserPage'
 import BorrowingManagementPage from './pages/petugas/BorrowingManagementPage'
 import UnitManagementPage from './pages/admin/UnitManagementPage'
 import BorrowingDetailPetugasPage from './pages/petugas/BorrowingDetailPetugasPage'
+import BannerManagementPage from './pages/admin/BannerManagementPage'
+import ScanQRPage from './pages/admin/ScanQRPage'
+import PeminjamRoute from './components/PeminjamRoute'
 
 export default function App() {
   return (
@@ -46,19 +49,21 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/list-peralatan" replace />} />
 
-          <Route element={<LandingPage />}>
-            <Route path="home" element={<HomePage />} />
-            <Route path="list-peralatan" element={<EquipmentListPage />} />
-            <Route path="cara-peminjaman" element={<HowToBorrowPage />} />
-            <Route path="tentang-kami" element={<AboutPage />} />
-            <Route path="detail-alat/:id" element={<EquipmentDetailPage />} />
-            <Route path="form-peminjaman/:id/:unitId" element={<BorrowRequestPage />} />
-            <Route path="list-peminjaman" element={<BorrowingListPage />} />
-            <Route path="detail-peminjaman/:id" element={<BorrowingDetailPage />} />
-            <Route path="keranjang" element={<CartPage />} />
-            <Route path="submit-peminjaman" element={<SubmitLoanRequestPage />} />
-            <Route path="settings" element={<SettingUserPage />} />
-            <Route path='*' element={<NotFoundPage />} key='not-found' />
+          <Route element={<PeminjamRoute />}>
+            <Route element={<LandingPage />}>
+              <Route path="home" element={<HomePage />} />
+              <Route path="list-peralatan" element={<EquipmentListPage />} />
+              <Route path="cara-peminjaman" element={<HowToBorrowPage />} />
+              <Route path="tentang-kami" element={<AboutPage />} />
+              <Route path="detail-alat/:id" element={<EquipmentDetailPage />} />
+              <Route path="form-peminjaman/:id/:unitId" element={<BorrowRequestPage />} />
+              <Route path="list-peminjaman" element={<BorrowingListPage />} />
+              <Route path="detail-peminjaman/:id" element={<BorrowingDetailPage />} />
+              <Route path="keranjang" element={<CartPage />} />
+              <Route path="submit-peminjaman" element={<SubmitLoanRequestPage />} />
+              <Route path="settings" element={<SettingUserPage />} />
+              <Route path='*' element={<NotFoundPage />} key='not-found' />
+            </Route>
           </Route>
 
           <Route element={<PublicRoute />}>
@@ -75,7 +80,9 @@ export default function App() {
             <Route path="manajemen-alat" element={<LayoutWrapper><ToolManagementPage /></LayoutWrapper>} />
             <Route path="manajemen-alat/:id/unit" element={<LayoutWrapper><UnitManagementPage /></LayoutWrapper>} />
             <Route path="manajemen-kategori" element={<LayoutWrapper><CategoryManagementPage /></LayoutWrapper>} />
+            <Route path="manajemen-banner" element={<LayoutWrapper><BannerManagementPage /></LayoutWrapper>} />
             <Route path="manajemen-log" element={<LayoutWrapper><LogManagementPage /></LayoutWrapper>} />
+            <Route path="scan-qr" element={<LayoutWrapper><ScanQRPage /></LayoutWrapper>} />
           </Route>
 
           {/* Petugas Pages */}

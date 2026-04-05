@@ -8,7 +8,7 @@ export default function PublicRoute() {
 
     const dashboardPath = roleUser === "admin" ? "/admin/dashboard"
         : roleUser === "petugas" ? "/petugas/dashboard"
-            : roleUser === "peminjam" ? "/peminjam/dashboard"
+            : roleUser === "peminjam" ? "/list-peralatan"
                 : "/dashboard"
 
     if (token) {

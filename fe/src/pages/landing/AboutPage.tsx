@@ -13,7 +13,7 @@ export function AboutPage() {
   return (
     <div className="bg-white min-h-screen">
       {/* Hero Section */}
-      <section className="pt-40 pb-20 px-6 lg:px-8">
+      <section className="pt-52 pb-20 px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-lime-100 border border-lime-200 rounded-full mb-6">
             <span className="w-2 h-2 bg-lime-400 rounded-full" />
@@ -23,7 +23,7 @@ export function AboutPage() {
           <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
             Membuat Peminjaman Alat
             <br />
-            <span className="text-lime-500">Lebih Mudah & Praktis</span>
+            <span className="text-lime-800">Lebih Mudah & Praktis</span>
           </h1>
 
           <p className="text-xl text-gray-600 leading-relaxed">

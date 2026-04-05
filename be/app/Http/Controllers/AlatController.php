@@ -16,65 +16,49 @@ class AlatController extends Controller
      */
     public function getListAlatForUserWithoudLogin(Request $request)
     {
-        // ambil query param
         $search   = $request->query('search');
-        $kategori = $request->query('kategori'); // sebelumnya "category"
-        $status   = $request->query('status');
+        $kategori = $request->query('kategori');
+        $page     = $request->query('page', 1);
+        $perPage  = $request->query('per_page', 12);
 
-        // base query
         $query = Alat::with('kategori')
-            ->select(
-                'id',
-                'nama_alat',
-                'id_kategori',
-                'deskripsi',
-                'foto_alat',
-                'harga',
-                'batas_peminjaman',
-                'spesifikasi',
-                'jumlah_unit'
-            );
+            ->withCount([
+                'alatUnit as total_unit',
+                'alatUnit as unit_tersedia' => function ($query) {
+                    $query->where('status', 'Tersedia');
+                }
+            ]);
 
-        // filter search
         if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('nama_alat', 'like', "%{$search}%");
-            });
+            $query->where('nama_alat', 'like', "%{$search}%");
         }
 
-        // filter kategori
         if (!empty($kategori) && $kategori !== 'all') {
             $query->where('id_kategori', $kategori);
         }
 
-        // ambil semua data tanpa paginate
-        $alat = $query->get();
+        $alat = $query->paginate($perPage, ['*'], 'page', $page);
 
-        // transform response
-        $data = $alat->map(function ($alat) {
+        $data = $alat->getCollection()->map(function ($alat) {
             return [
                 'id'          => $alat->id,
                 'nama_alat'   => $alat->nama_alat,
-                'id_kategori' => [
-                    'id'   => $alat->id_kategori,
-                    'nama_kategori' => $alat->kategori?->nama_kategori
-                ],
-                'kategori'    => $alat->kategori?->nama_kategori,
+                'id_kategori' => ['id' => $alat->id_kategori, 'nama_kategori' => $alat->kategori?->nama_kategori],
+                'kategori'    => ['id' => $alat->id_kategori, 'nama_kategori' => $alat->kategori?->nama_kategori],
                 'deskripsi'   => $alat->deskripsi,
-                'status'      => $alat->status,
-                'foto_alat'   => $alat->foto_alat
-                    ? asset('storage/' . $alat->foto_alat)
-                    : null,
-
+                'foto_alat'   => $alat->foto_alat ? asset('storage/' . $alat->foto_alat) : null,
                 'spesifikasi' => $alat->spesifikasi ?? [],
                 'jumlah_unit' => $alat->jumlah_unit,
+                'unit_tersedia' => $alat->unit_tersedia ?? 0,
+                'total_unit'    => $alat->total_unit ?? 0,
             ];
         });
 
-        // response
         return response()->json([
-            'message' => 'List of alat',
-            'data'    => $data,
+            'message'  => 'List of alat',
+            'alat'     => $data,
+            'total'    => $alat->total(),
+            'next_page' => $alat->hasMorePages() ? $alat->currentPage() + 1 : null,
         ]);
     }
 
@@ -235,7 +219,14 @@ class AlatController extends Controller
     public function showWithoutLogin($id)
     {
         // Pakai find() manual, jangan route model binding
-        $alat = Alat::with('kategori')->find($id);
+        $alat = Alat::with('kategori')
+            ->withCount([
+                'alatUnit as total_unit',
+                'alatUnit as unit_tersedia' => function ($query) {
+                    $query->where('status', 'Tersedia');
+                }
+            ])
+            ->find($id);
 
         if (!$alat) {
             return response()->json([
@@ -259,6 +250,8 @@ class AlatController extends Controller
                 'foto_alat'     => $alat->foto_alat ? asset('storage/' . $alat->foto_alat) : null,
                 'spesifikasi'   => $alat->spesifikasi ?? [],
                 'jumlah_unit'   => $alat->jumlah_unit,
+                'unit_tersedia' => $alat->unit_tersedia ?? 0,
+                'total_unit'    => $alat->total_unit ?? 0,
             ]
         ]);
     }
@@ -422,6 +415,41 @@ class AlatController extends Controller
 
         return response()->json([
             'message' => 'Alat berhasil dihapus'
+        ]);
+    }
+
+    public function getAlatPopuler(Request $request)
+    {
+        $limit = $request->query('limit', 4);
+
+        $alat = Alat::with('kategori')
+            ->select('id', 'nama_alat', 'id_kategori', 'deskripsi', 'foto_alat', 'harga', 'batas_peminjaman', 'spesifikasi', 'jumlah_unit')
+            ->withCount(['alatUnit as total_dipinjam' => function ($query) {
+                $query->whereExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('detail_peminjaman')
+                        ->whereColumn('detail_peminjaman.id_alat_unit', 'alat_unit.id');
+                });
+            }])
+            ->orderByDesc('total_dipinjam')
+            ->limit($limit)
+            ->get()
+            ->map(function ($alat) {
+                return [
+                    'id'             => $alat->id,
+                    'nama_alat'      => $alat->nama_alat,
+                    'kategori'       => ['id' => $alat->id_kategori, 'nama_kategori' => $alat->kategori?->nama_kategori],
+                    'deskripsi'      => $alat->deskripsi,
+                    'foto_alat'      => $alat->foto_alat ? asset('storage/' . $alat->foto_alat) : null,
+                    'spesifikasi'    => $alat->spesifikasi ?? [],
+                    'jumlah_unit'    => $alat->jumlah_unit,
+                    'total_dipinjam' => $alat->total_dipinjam,
+                ];
+            });
+
+        return response()->json([
+            'message' => 'Alat terpopuler',
+            'alat'    => $alat,
         ]);
     }
 }

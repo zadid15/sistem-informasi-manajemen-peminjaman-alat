@@ -17,6 +17,8 @@ export interface Alat {
     batas_peminjaman: number;
     jumlah_unit: number;
     spesifikasi: Record<string, string | number>;
+    unit_tersedia?: number | null;
+    total_unit?: number | null;
 }
 
 export type SpesifikasiPayload = {

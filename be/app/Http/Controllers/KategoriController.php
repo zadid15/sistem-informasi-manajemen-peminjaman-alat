@@ -41,39 +41,29 @@ class KategoriController extends Controller
             ], 403);
         }
 
-        // Ambil query parameter search
         $search = $request->query('search');
 
-        // Ambil kategori + hitung jumlah alat
-        $query = Kategori::withCount('alat')->select('id', 'nama_kategori', 'deskripsi', 'foto_kategori');
+        $query = Kategori::withCount('alat');
 
         if ($search) {
             $query->where('nama_kategori', 'like', "%{$search}%");
         }
 
-        $kategori = $query->paginate(10);
-
-        $kategori->getCollection()->transform(function ($kategori) {
+        $kategori = $query->get()->map(function ($kategori) {
             return [
-                'id' => $kategori->id,
+                'id'            => $kategori->id,
                 'nama_kategori' => $kategori->nama_kategori,
-                'deskripsi' => $kategori->deskripsi,
+                'deskripsi'     => $kategori->deskripsi,
                 'foto_kategori' => $kategori->foto_kategori
                     ? asset('storage/' . $kategori->foto_kategori)
                     : null,
-                'jumlah_alat' => $kategori->alat->count(),
+                'jumlah_alat'   => $kategori->alat_count,
             ];
         });
 
         return response()->json([
-            'message' => 'List of kategori',
-            'data' => $kategori->items(),
-            'pagination' => [
-                'current_page' => $kategori->currentPage(),
-                'last_page' => $kategori->lastPage(),
-                'per_page' => $kategori->perPage(),
-                'total' => $kategori->total(),
-            ]
+            'message'  => 'List of kategori',
+            'kategori' => $kategori,
         ]);
     }
 

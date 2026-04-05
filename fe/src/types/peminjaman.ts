@@ -49,6 +49,14 @@ export interface Peminjaman {
     tanggal_kembali: string | null;
     status: string;
     catatan: string | null;
+    approver?: {
+        id: number;
+        nama: string;
+    } | null;
+    receiver?: {
+        id: number;
+        nama: string;
+    } | null;
     alasan_penolakan: string | null;
     detail_peminjaman: DetailPeminjaman[];
 }

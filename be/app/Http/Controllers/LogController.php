@@ -44,7 +44,7 @@ class LogController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created resource in storage.ha
      */
     public function store(Request $request)
     {

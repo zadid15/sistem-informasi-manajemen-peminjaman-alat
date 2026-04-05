@@ -42,7 +42,13 @@ class PeminjamanController extends Controller
             );
 
         if ($search) {
-            $query->where('status', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('status', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($q2) use ($search) {
+                        $q2->where('nama', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
         }
 
         $data = $query->paginate(10);
@@ -471,11 +477,27 @@ class PeminjamanController extends Controller
                 $detail->alatUnit->update(['status' => $statusUnit]);
             }
 
-            $peminjaman->update([
-                'status'          => $isTerlambat ? 'dikembalikan_terlambat' : 'dikembalikan',
-                'tanggal_kembali' => $data['tanggal_kembali'],
-                'received_by'     => $aktor->id,
-            ]);
+            // Hitung total denda setelah semua unit diupdate
+            $peminjaman->refresh();
+            $totalDendaKeseluruhan = $peminjaman->detailPeminjaman->sum('total_denda');
+            $adaDenda = $totalDendaKeseluruhan > 0;
+
+            if ($adaDenda) {
+                // Ada denda → tunggu pembayaran dulu
+                $peminjaman->update([
+                    'status'          => 'menunggu_pembayaran',
+                    'tanggal_kembali' => $data['tanggal_kembali'],
+                    'received_by'     => $aktor->id,
+                    'is_terlambat'    => $isTerlambat, // simpan info terlambat untuk nanti
+                ]);
+            } else {
+                // Tidak ada denda → langsung selesai
+                $peminjaman->update([
+                    'status'          => $isTerlambat ? 'dikembalikan_terlambat' : 'dikembalikan',
+                    'tanggal_kembali' => $data['tanggal_kembali'],
+                    'received_by'     => $aktor->id,
+                ]);
+            }
 
             Log::create([
                 'user_id'   => $aktor->id,
@@ -488,9 +510,11 @@ class PeminjamanController extends Controller
             DB::commit();
 
             return response()->json([
-                'message'        => 'Pengembalian berhasil dikonfirmasi',
+                'message'        => $adaDenda ? 'Pengembalian dikonfirmasi, menunggu pembayaran denda' : 'Pengembalian berhasil dikonfirmasi',
                 'terlambat_hari' => $terlambatHari,
-                'status'         => $isTerlambat ? 'dikembalikan_terlambat' : 'dikembalikan',
+                'ada_denda'      => $adaDenda,
+                'total_denda'    => $totalDendaKeseluruhan,
+                'status'         => $adaDenda ? 'menunggu_pembayaran' : ($isTerlambat ? 'dikembalikan_terlambat' : 'dikembalikan'),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -545,7 +569,9 @@ class PeminjamanController extends Controller
 
         $peminjaman = Peminjaman::with([
             'detailPeminjaman.alatUnit.alat:id,nama_alat,foto_alat,harga,deskripsi,id_kategori',
-            'detailPeminjaman.alatUnit.alat.kategori'
+            'detailPeminjaman.alatUnit.alat.kategori',
+            'approver:id,nama',  // tambahkan ini
+            'receiver:id,nama',  // tambahkan ini
         ])
             ->where('id', $id)
             ->where('id_user', $aktor->id)
@@ -569,5 +595,20 @@ class PeminjamanController extends Controller
             'message' => 'Detail peminjaman',
             'data' => $peminjaman
         ]);
+    }
+
+    public function laporanPdf(Request $request)
+    {
+        $query = Peminjaman::with(['user', 'detailPeminjaman.alatUnit.alat'])
+            ->when($request->tanggal_mulai, fn($q) =>
+            $q->whereDate('tanggal_pinjam', '>=', $request->tanggal_mulai))
+            ->when($request->tanggal_akhir, fn($q) =>
+            $q->whereDate('tanggal_pinjam', '<=', $request->tanggal_akhir))
+            ->when($request->status && $request->status !== 'all', fn($q) =>
+            $q->where('status', $request->status))
+            ->orderBy('tanggal_pinjam', 'desc')
+            ->get();
+
+        return response()->json(['data' => $query]);
     }
 }

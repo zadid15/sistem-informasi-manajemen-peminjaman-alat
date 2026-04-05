@@ -118,7 +118,7 @@ export function HowToBorrowPage() {
   return (
     <div className="bg-white min-h-screen">
       {/* Header */}
-      <section className="pt-40 pb-16 px-6 lg:px-8 bg-gradient-to-b from-lime-50/30 to-white">
+      <section className="pt-52 pb-16 px-6 lg:px-8 bg-gradient-to-b from-lime-50/30 to-white">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-lime-100 border border-lime-200 rounded-full mb-6">
             <HelpCircle size={16} className="text-lime-600" />

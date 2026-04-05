@@ -7,6 +7,8 @@ import {
     Activity,
     FileBarChart,
     User,
+    Image,
+    QrCode,
 } from 'lucide-react';
 import type { UserRoleDashboard } from '../types/user';
 import simpa from '../assets/simpa.png';
@@ -31,6 +33,8 @@ const menuItems: Record<UserRoleDashboard, MenuItem[]> = {
         { icon: Users, label: 'Manajemen User', path: 'manajemen-user' },
         { icon: Package, label: 'Manajemen Alat', path: 'manajemen-alat' },
         { icon: FolderTree, label: 'Manajemen Kategori', path: 'manajemen-kategori' },
+        { icon: Image, label: 'Manajemen Banner', path: 'manajemen-banner' },
+        { icon: QrCode, label: 'Scan QR Unit', path: 'scan-qr' },
         { icon: Activity, label: 'Log Aktivitas', path: 'manajemen-log' },
     ],
     petugas: [

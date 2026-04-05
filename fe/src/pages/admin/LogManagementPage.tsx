@@ -78,27 +78,27 @@ export default function LogManagementPage() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-gray-900">Log Management</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Log Aktivitas</h1>
                 <p className="text-gray-600 text-md mt-1">Log aktivitas sistem peminjaman alat</p>
             </div>
 
             {/* Search + Info */}
-            <div className="bg-white rounded-xl border p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                        placeholder="Cari aktor, aktivitas, atau IP..."
-                        value={searchInput}
-                        onChange={(e) => {
-                            setSearchInput(e.target.value);
-                            setSearchParams({ page: "1" });
-                        }}
-                        className="pl-9"
-                    />
+            {/* Search */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Input
+                            placeholder="Cari aktor, aktivitas, atau IP..."
+                            value={searchInput}
+                            onChange={(e) => {
+                                setSearchInput(e.target.value);
+                                setSearchParams({ page: "1" });
+                            }}
+                            className="pl-10"
+                        />
+                    </div>
                 </div>
-                <p className="text-sm text-gray-500 flex-shrink-0">
-                    Total <span className="font-semibold text-gray-800">{pagination.total}</span> log
-                </p>
             </div>
 
             {/* Table */}
@@ -169,7 +169,7 @@ export default function LogManagementPage() {
                                             <p className="font-medium text-gray-800">{log.aktor}</p>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${ROLE_COLORS[log.user?.role ?? ""] ?? "bg-gray-100 text-gray-600"}`}>
+                                            <span className={`text-xs px-2 py-1 rounded-full font-medium uppercase ${ROLE_COLORS[log.user?.role ?? ""] ?? "bg-gray-100 text-gray-600"}`}>
                                                 {log.user?.role ?? "-"}
                                             </span>
                                         </td>

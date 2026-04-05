@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { tolakPeminjaman, setujuiPeminjaman } from "../../services/peminjamanService";
 import axiosInstance from "../../utils/axios";
@@ -15,6 +15,7 @@ type StatusPeminjaman =
     | 'ditolak'
     | 'dipinjam'
     | 'pengembalian_diajukan'
+    | 'menunggu_pembayaran'
     | 'dikembalikan'
     | 'dikembalikan_terlambat';
 
@@ -68,6 +69,7 @@ const TIMELINE_STEPS = [
 function getStepIndex(status: string) {
     if (status === "dikembalikan_terlambat") return TIMELINE_STEPS.length - 1;
     if (status === "ditolak") return 1;
+    if (status === "menunggu_pembayaran") return 3;
     return TIMELINE_STEPS.findIndex(s => s.key === status);
 }
 
@@ -80,6 +82,7 @@ const statusColors: Record<StatusPeminjaman, string> = {
     pengembalian_diajukan: 'bg-purple-100 text-purple-800',
     dikembalikan: 'bg-gray-100 text-gray-800',
     dikembalikan_terlambat: 'bg-orange-100 text-orange-800',
+    menunggu_pembayaran: 'bg-orange-300 text-orange-800',
 };
 
 const statusLabels: Record<StatusPeminjaman, string> = {
@@ -91,6 +94,7 @@ const statusLabels: Record<StatusPeminjaman, string> = {
     pengembalian_diajukan: 'PENGEMBALIAN DIAJUKAN',
     dikembalikan: 'DIKEMBALIKAN',
     dikembalikan_terlambat: 'DIKEMBALIKAN TERLAMBAT',
+    menunggu_pembayaran: 'MENUNGGU PEMBAYARAN',
 };
 
 const DENDA_PERSEN: Record<string, number> = {
@@ -142,12 +146,35 @@ export default function BorrowingDetailPetugasPage() {
     const [checksKembali, setChecksKembali] = useState({ kondisiSesuai: false, fotoSesuai: false, dataBenar: false });
     const [previewFoto, setPreviewFoto] = useState<string | null>(null);
 
+    const [pembayaran, setPembayaran] = useState<{
+        status: string;
+        metode: string | null;
+        jumlah: number;
+        confirmed_at: string | null;
+        confirmed_by: { nama: string } | null;
+    } | null>(null);
+
     useEffect(() => {
         const load = async () => {
             setLoading(true);
             try {
                 const res = await axiosInstance.get(`/peminjaman/${id}/detail-petugas`);
                 setData(res.data.data.peminjaman);
+
+                // auto-fill kondisi baik untuk semua unit
+                const autoKondisi: Record<number, string> = {};
+                res.data.data.peminjaman.detail_peminjaman.forEach((item: { id: number }) => {
+                    autoKondisi[item.id] = "baik";
+                });
+                setKondisiPerUnit(autoKondisi);
+
+                // fetch status pembayaran
+                try {
+                    const resPembayaran = await axiosInstance.get(`/peminjaman/${id}/pembayaran`);
+                    setPembayaran(resPembayaran.data.pembayaran);
+                } catch {
+                    // tidak ada pembayaran, biarkan null
+                }
             } catch {
                 toast.error("Gagal memuat data peminjaman");
             } finally {
@@ -157,11 +184,17 @@ export default function BorrowingDetailPetugasPage() {
         load();
     }, [id]);
 
+    useEffect(() => {
+        if (data?.status === "pengembalian_diajukan") {
+            setTanggalKembali(new Date().toISOString().split("T")[0]);
+        }
+    }, [data?.status]);
+
     const allChecked = Object.values(checks).every(Boolean);
     const allCheckedKembali = Object.values(checksKembali).every(Boolean);
 
     const allUnitFilled = data?.detail_peminjaman.every(
-        item => kondisiPerUnit[item.id] && fotoPerUnit[item.id]
+        item => fotoPerUnit[item.id]
     ) ?? false;
 
     const allUnitKembaliFilled = data?.detail_peminjaman.every(
@@ -210,7 +243,8 @@ export default function BorrowingDetailPetugasPage() {
             });
             await setujuiPeminjaman(Number(id), formData);
             toast.success("Peminjaman berhasil disetujui");
-            setData(prev => prev ? { ...prev, status: "dipinjam" } : prev);
+            const res = await axiosInstance.get(`/peminjaman/${id}/detail-petugas`);
+            setData(res.data.data.peminjaman);
         } catch {
             toast.error("Gagal menyetujui peminjaman");
         } finally {
@@ -227,7 +261,8 @@ export default function BorrowingDetailPetugasPage() {
         try {
             await tolakPeminjaman(Number(id), alasanPenolakan);
             toast.success("Peminjaman ditolak");
-            setData(prev => prev ? { ...prev, status: "ditolak" } : prev);
+            const res = await axiosInstance.get(`/peminjaman/${id}/detail-petugas`);
+            setData(res.data.data.peminjaman);
             setShowTolakForm(false);
         } catch {
             toast.error("Gagal menolak peminjaman");
@@ -284,14 +319,27 @@ export default function BorrowingDetailPetugasPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Detail Peminjaman ID {data.id}</h1>
                     <p className="text-gray-600 text-md mt-1">Kelola dan konfirmasi peminjaman alat</p>
                 </div>
-                <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${statusColors[data.status]}`}>
-                    {statusLabels[data.status]}
-                </span>
+                <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${statusColors[data.status]}`}>
+                        {statusLabels[data.status]}
+                    </span>
+                    {(data.status === "dikembalikan" || data.status === "dikembalikan_terlambat" || data.status === "menunggu_pembayaran") && (() => {
+                        const totalDenda = data.detail_peminjaman.reduce((acc, item) => acc + Number(item.total_denda ?? 0), 0);
+                        if (totalDenda <= 0) return null;
+                        const sudahLunas = pembayaran?.status === "lunas" || pembayaran?.status === "manual";
+                        if (!sudahLunas) return null; // ← tambah ini
+                        return (
+                            <span className="px-3 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1.5 bg-green-100 text-green-800">
+                                <CheckCircle className="w-4 h-4" /> DENDA LUNAS
+                            </span>
+                        );
+                    })()}
+                </div>
             </div>
 
             <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => navigate(-1)}>
@@ -305,24 +353,41 @@ export default function BorrowingDetailPetugasPage() {
                 <div className="flex items-start justify-between relative">
                     <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 z-0" />
                     <div
-                        className={`absolute top-4 left-0 h-1 z-0 transition-all duration-300 ${isRejected ? "bg-red-400" : "bg-green-500"}`}
+                        className={`absolute top-4 left-0 h-1 z-0 transition-all duration-500 ${isRejected ? "bg-red-400" : "bg-green-500"}`}
                         style={{ width: `${(currentIndex / (TIMELINE_STEPS.length - 1)) * 100}%` }}
                     />
                     {TIMELINE_STEPS.map((step, index) => {
                         const isDone = index < currentIndex || (currentIndex === TIMELINE_STEPS.length - 1 && index === currentIndex);
-                        const isActive = index === currentIndex && !isRejected;
+                        const isActive = index === currentIndex && !isRejected && index !== TIMELINE_STEPS.length - 1;
                         return (
-                            <div key={step.key} className="flex-1 flex flex-col items-center z-10 relative">
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shadow
-                                    ${isRejected && index <= currentIndex ? "bg-red-500 text-white"
+                            <div key={step.key} className="flex-1 flex flex-col items-center z-10 relative group">
+                                {/* Pulse ring untuk step aktif */}
+                                {isActive && (
+                                    <div className="absolute top-0 w-9 h-9 rounded-full bg-blue-400 animate-ping opacity-30" />
+                                )}
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shadow transition-all duration-300
+                        ${isRejected && index <= currentIndex ? "bg-red-500 text-white scale-105"
                                         : isDone ? "bg-green-500 text-white"
-                                            : isActive ? "bg-blue-500 text-white"
+                                            : isActive ? "bg-blue-500 text-white scale-110 shadow-lg shadow-blue-200"
                                                 : "bg-gray-200 text-gray-500"
-                                    } transition-colors duration-300`}
+                                    }`}
                                 >
                                     {isDone ? "✓" : index + 1}
                                 </div>
-                                <span className="mt-2 text-sm text-gray-600 text-center max-w-[70px] leading-tight">{step.label}</span>
+
+                                {/* Tooltip */}
+                                <div className="absolute bottom-full mb-2 w-max px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                    {step.label}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
+                                </div>
+
+                                <span className={`mt-2 text-xs text-center max-w-[70px] leading-tight transition-colors ${isActive ? "text-blue-600 font-semibold"
+                                    : isRejected && index <= currentIndex ? "text-red-600 font-semibold"
+                                        : isDone ? "text-green-600 font-medium"
+                                            : "text-gray-500"
+                                    }`}>
+                                    {step.label}
+                                </span>
                             </div>
                         );
                     })}
@@ -385,7 +450,7 @@ export default function BorrowingDetailPetugasPage() {
                         <InfoItem label="Rencana Pengembalian" value={formatDate(data.rencana_pengembalian)} />
                         <InfoItem label="Tanggal Kembali" value={formatDate(data.tanggal_kembali)} />
                         <InfoItem label="Catatan" value={data.catatan} />
-                        <InfoItem label="Penyetuju Peminjaman" value={data.approver?.nama} />
+                        <InfoItem label={data.status === "ditolak" ? "Penolak Peminjaman" : "Penyetuju Peminjaman"} value={data.approver?.nama} />
                         <InfoItem label="Penerima Pengembalian" value={data.receiver?.nama} />
                     </div>
                 </div>
@@ -414,7 +479,7 @@ export default function BorrowingDetailPetugasPage() {
                                 <td className="px-6 py-4 font-mono">{item.alat_unit.kode_unit}</td>
                                 <td className="px-6 py-4">{item.alat_unit.lokasi}</td>
                                 <td className="px-6 py-4">{formatKondisi(item.kondisi_sebelum) ?? "-"}</td>
-                                <td className="px-6 py-4">{formatKondisi(item.kondisi_sesudah) ??  "-"}</td>
+                                <td className="px-6 py-4">{formatKondisi(item.kondisi_sesudah) ?? "-"}</td>
                                 <td className="px-6 py-4">{item.alat_unit.alat.harga ? formatRupiah(item.alat_unit.alat.harga) : "-"}</td>
                             </tr>
                         ))}
@@ -499,14 +564,11 @@ export default function BorrowingDetailPetugasPage() {
                                                 Kondisi Sebelum Dipinjam <span className="text-red-500">*</span>
                                             </label>
                                             <select
-                                                value={kondisiPerUnit[item.id] ?? ""}
-                                                onChange={(e) => setKondisiPerUnit(prev => ({ ...prev, [item.id]: e.target.value }))}
-                                                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500"
+                                                value="baik"
+                                                disabled
+                                                className="w-full rounded-lg border px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
                                             >
-                                                <option value="">Pilih kondisi...</option>
                                                 <option value="baik">Baik</option>
-                                                <option value="rusak_ringan">Rusak Ringan</option>
-                                                <option value="rusak_berat">Rusak Berat</option>
                                             </select>
                                         </div>
                                         <div>
@@ -588,11 +650,11 @@ export default function BorrowingDetailPetugasPage() {
                             />
                             <div className="flex gap-3">
                                 <button onClick={handleTolak} disabled={submitting}
-                                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition disabled:opacity-50">
+                                    className="flex-1 py-2.5 cursor-pointer rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition disabled:opacity-50">
                                     {submitting ? "Menolak..." : "Konfirmasi Tolak"}
                                 </button>
                                 <button onClick={() => setShowTolakForm(false)} disabled={submitting}
-                                    className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition">
+                                    className="flex-1 py-2.5 cursor-pointer rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition">
                                     Batal
                                 </button>
                             </div>
@@ -604,7 +666,7 @@ export default function BorrowingDetailPetugasPage() {
             {/* ===== FORM KONFIRMASI PENGEMBALIAN ===== */}
             {data.status === "pengembalian_diajukan" && (
                 <div className="bg-white rounded-xl border p-6 space-y-6">
-                    <h2 className="text-sm font-semibold text-gray-900">Konfirmasi Pengembalian</h2>
+                    <h2 className="text-xl font-semibold text-gray-900">Konfirmasi Pengembalian</h2>
 
                     <div className="space-y-5">
                         <div>
@@ -614,9 +676,8 @@ export default function BorrowingDetailPetugasPage() {
                             <input
                                 type="date"
                                 value={tanggalKembali}
-                                max={new Date().toISOString().split("T")[0]}
-                                onChange={(e) => setTanggalKembali(e.target.value)}
-                                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500"
+                                readOnly
+                                className="w-full rounded-lg border px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
                             />
                         </div>
 
@@ -678,7 +739,7 @@ export default function BorrowingDetailPetugasPage() {
                             return (
                                 <div className={`rounded-xl border p-4 space-y-3 ${adaDenda ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
                                     <p className={`text-md font-semibold ${adaDenda ? "text-red-800" : "text-green-800"}`}>
-                                        {adaDenda ? "Estimasi Denda" : "✓ Tidak ada denda"}
+                                        {adaDenda ? "Estimasi Denda" : "Tidak ada denda, semua kondisi unit baik dan tepat waktu!"}
                                     </p>
                                     {adaDenda && (
                                         <>
@@ -730,7 +791,7 @@ export default function BorrowingDetailPetugasPage() {
                                     <CheckCircle2 size={16} className="text-amber-600" />
                                     <p className="text-sm font-semibold text-amber-800">Konfirmasi Sebelum Menyimpan</p>
                                 </div>
-                                <p className="text-xs text-amber-700">Pastikan semua data pengembalian sudah benar dan sesuai kondisi fisik alat.</p>
+                                <p className="text-sm text-amber-700">Pastikan semua data pengembalian sudah benar dan sesuai kondisi fisik alat.</p>
                                 {[
                                     { key: "kondisiSesuai", label: "Kondisi semua unit sudah sesuai dengan kondisi fisik alat saat dikembalikan" },
                                     { key: "fotoSesuai", label: "Foto yang diupload adalah foto alat yang benar saat dikembalikan" },
@@ -784,7 +845,7 @@ export default function BorrowingDetailPetugasPage() {
             )}
 
             {/* Rincian Denda */}
-            {(data.status === "dikembalikan" || data.status === "dikembalikan_terlambat") && (() => {
+            {(data.status === "dikembalikan" || data.status === "dikembalikan_terlambat" || data.status === "menunggu_pembayaran") && (() => {
                 const totalDenda = data.detail_peminjaman.reduce(
                     (acc, item) => acc + Number(item.total_denda ?? 0), 0
                 );
@@ -828,13 +889,39 @@ export default function BorrowingDetailPetugasPage() {
                             * Denda mencakup kerusakan dan/atau keterlambatan pengembalian
                         </div>
                     </div>
-                ) : (
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                        <span className="text-green-600 text-lg">✓</span>
-                        <p className="text-sm text-green-700 font-medium">Tidak ada denda</p>
-                    </div>
-                );
+                ) : null;
             })()}
+            {/* Konfirmasi Manual Pembayaran */}
+            {data.status === "menunggu_pembayaran" && !['lunas', 'manual'].includes(pembayaran?.status ?? '') && (
+                <div className="bg-white rounded-xl border p-6 space-y-4">
+                    <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle2 size={18} className="text-amber-600" />
+                        </div>
+                        <div>
+                            <p className="font-semibold text-gray-900">Konfirmasi Pembayaran Tunai</p>
+                            <p className="text-sm text-gray-500 mt-0.5">Gunakan ini jika peminjam sudah membayar denda secara tunai/cash langsung kepada petugas.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={async () => {
+                            try {
+                                await axiosInstance.post(`/peminjaman/${id}/konfirmasi-manual`);
+                                toast.success("Pembayaran dikonfirmasi");
+                                const res = await axiosInstance.get(`/peminjaman/${id}/detail-petugas`);
+                                setData(res.data.data.peminjaman);
+                                const resPembayaran = await axiosInstance.get(`/peminjaman/${id}/pembayaran`);
+                                setPembayaran(resPembayaran.data.pembayaran);
+                            } catch {
+                                toast.error("Gagal mengkonfirmasi pembayaran");
+                            }
+                        }}
+                        className="w-full py-2.5 rounded-xl bg-lime-800 hover:bg-lime-700 text-white text-sm font-semibold transition cursor-pointer"
+                    >
+                        Konfirmasi Pembayaran Tunai
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

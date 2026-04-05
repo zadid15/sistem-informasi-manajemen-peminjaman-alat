@@ -11,7 +11,7 @@ export const getKategori = async (
     });
 
     return {
-        kategori: res.data.data as Kategori[],
+        kategori: res.data.kategori as Kategori[],
         pagination: res.data.pagination,
         message: res.data.message,
     };

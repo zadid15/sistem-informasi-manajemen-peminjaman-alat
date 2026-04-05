@@ -336,13 +336,18 @@ function DashboardSkeleton() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                    <Sk className="h-8 w-52" />
-                    <Sk className="h-4 w-72" />
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+                        Dashboard Admin
+                    </h1>
+                    <p className="text-md text-gray-500 mt-1">
+                        Ringkasan dan kontrol sistem peminjaman alat
+                    </p>
                 </div>
-                <div className="space-y-2 text-right">
-                    <Sk className="h-4 w-28 ml-auto" />
-                    <Sk className="h-8 w-40 ml-auto" />
+                {/* Skeleton greeting */}
+                <div className="text-right">
+                    <div className="h-5 w-24 bg-gray-200 rounded animate-pulse mb-1 ml-auto" />
+                    <div className="h-8 w-40 bg-gray-300 rounded animate-pulse ml-auto" />
                 </div>
             </div>
 

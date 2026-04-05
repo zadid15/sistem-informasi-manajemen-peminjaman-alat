@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
-import { equipmentData } from "../../components/data/equipment";
 
 import kamera from "../../assets/banners/kamera.jpg";
 import bor from "../../assets/banners/bor.jpg";
@@ -12,6 +11,8 @@ import printer from "../../assets/banners/printer.jpg";
 import ramadhan from "../../assets/banners/ramadhan.png";
 import temukan from "../../assets/banners/temukan.png";
 import weAreOpen from "../../assets/banners/weareopen.png";
+import type { Alat } from "../../types/alat";
+import { getAlatPopuler } from "../../services/alatService";
 
 const banners = [
     {
@@ -40,8 +41,17 @@ const bannerImages = [
 export default function HomePage() {
 
     const [currentSlide, setCurrentSlide] = useState(0);
-    const featuredEquipment = equipmentData.slice(0, 4);
     const [currentBanner, setCurrentBanner] = useState(0);
+
+    const [featuredEquipment, setFeaturedEquipment] = useState<Alat[]>([]);
+    const [loadingFeatured, setLoadingFeatured] = useState(true);
+
+    useEffect(() => {
+        getAlatPopuler(4)
+            .then(res => setFeaturedEquipment(res.alat))
+            .catch(console.error)
+            .finally(() => setLoadingFeatured(false));
+    }, []);
 
     // Auto slide
     useEffect(() => {
@@ -91,7 +101,7 @@ export default function HomePage() {
                     <div className="max-w-3xl mx-auto">
                         <div className="inline-flex items-center gap-2 px-4 py-2 bg-lime-50 border border-lime-200 rounded-full mb-8">
                             <span className="w-2 h-2 bg-lime-400 rounded-full animate-pulse" />
-                            <span className="text-sm font-medium text-gray-700">
+                            <span className="text-xl font-medium text-gray-700">
                                 Ketersediaan alat diperbarui secara real-time
                             </span>
                         </div>
@@ -101,7 +111,7 @@ export default function HomePage() {
                             Bersama SIMPA.
                         </h1>
 
-                        <p className="text-xl text-gray-600 mb-10 leading-relaxed">
+                        <p className="text-2xl text-gray-600 mb-10 leading-relaxed">
                             SIMPA membantu proses peminjaman alat jadi lebih cepat dan tertata.
                             Cek ketersediaan, ajukan peminjaman, dan pantau status secara real-time.
                         </p>
@@ -109,7 +119,7 @@ export default function HomePage() {
                         <div className="flex flex-wrap gap-4">
                             <Link
                                 to="/list-peralatan"
-                                className="group px-8 py-4 bg-lime-400 hover:bg-lime-500 text-gray-900 font-semibold rounded-xl transition-all hover:shadow-xl hover:shadow-lime-500/30 hover:-translate-y-1 flex items-center gap-2"
+                                className="group px-8 py-4 bg-lime-400 hover:bg-lime-500 text-gray-900 font-semibold rounded-xl transition-all hover:shadow-xl hover:shadow-lime-500/30 hover:-translate-y-1 flex items-center gap-2 text-xl"
                             >
                                 Lihat Daftar Alat
                                 <ArrowRight
@@ -120,7 +130,7 @@ export default function HomePage() {
 
                             <Link
                                 to="/cara-peminjaman"
-                                className="px-8 py-4 border-2 border-lime-400 text-gray-900 font-semibold rounded-xl hover:bg-lime-50 transition-all"
+                                className="px-8 py-4 border-2 text-xl border-lime-400 text-gray-900 font-semibold rounded-xl hover:bg-lime-50 transition-all"
                             >
                                 Cara Peminjaman
                             </Link>
@@ -279,55 +289,59 @@ export default function HomePage() {
                             className="hidden md:flex items-center gap-2 text-lime-500 hover:text-lime-600 font-semibold group"
                         >
                             Lihat Semua
-                            <ArrowRight
-                                size={20}
-                                className="group-hover:translate-x-1 transition-transform"
-                            />
+                            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {featuredEquipment.map((item) => (
-                            <Link
-                                key={item.id}
-                                to={`/detail-alat/${item.id}`}
-                                className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border border-gray-100"
-                            >
-                                <div className="aspect-square bg-gray-100 overflow-hidden">
-                                    <ImageWithFallback
-                                        src={`https://source.unsplash.com/featured/?${item.image}`}
-                                        alt={item.name}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                    />
-                                </div>
-                                <div className="p-6">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                            {item.category}
-                                        </span>
-                                        <span
-                                            className={`px-3 py-1 rounded-full text-xs font-semibold ${item.status === "tersedia"
-                                                ? "bg-lime-100 text-lime-700"
-                                                : "bg-gray-100 text-gray-600"
-                                                }`}
-                                        >
-                                            {item.status === "tersedia" ? "Tersedia" : "Dipinjam"}
-                                        </span>
+                    {loadingFeatured ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                                <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm animate-pulse">
+                                    <div className="aspect-square bg-gray-200" />
+                                    <div className="p-6 space-y-3">
+                                        <div className="h-3 w-24 bg-gray-200 rounded" />
+                                        <div className="h-5 w-3/4 bg-gray-300 rounded" />
+                                        <div className="h-3 w-full bg-gray-200 rounded" />
+                                        <div className="h-3 w-5/6 bg-gray-200 rounded" />
                                     </div>
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-lime-600 transition-colors">
-                                        {item.name}
-                                    </h3>
-                                    <p className="text-sm text-gray-600 line-clamp-2">
-                                        {item.description}
-                                    </p>
                                 </div>
-                            </Link>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {featuredEquipment.map((item) => (
+                                <Link
+                                    key={item.id}
+                                    to={`/detail-alat/${item.id}`}
+                                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border border-gray-100"
+                                >
+                                    <div className="aspect-square bg-gray-100 overflow-hidden">
+                                        <ImageWithFallback
+                                            src={item.foto_alat instanceof File ? URL.createObjectURL(item.foto_alat) : item.foto_alat ?? undefined}
+                                            alt={item.nama_alat}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                        />
+                                    </div>
+                                    <div className="p-6">
+                                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                            {item.kategori.nama_kategori}
+                                        </span>
+                                        <h3 className="text-lg font-semibold text-gray-900 mt-2 mb-2 group-hover:text-lime-600 transition-colors">
+                                            {item.nama_alat}
+                                        </h3>
+                                        <p className="text-sm text-gray-600 line-clamp-2">{item.deskripsi}</p>
+                                        <div className="mt-4 text-sm font-medium text-lime-500 group-hover:text-lime-600">
+                                            View Details →
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="mt-8 text-center md:hidden">
                         <Link
-                            to="/equipment"
+                            to="/list-peralatan"
                             className="inline-flex items-center gap-2 px-8 py-4 bg-lime-400 hover:bg-lime-500 text-gray-900 font-semibold rounded-xl transition-all"
                         >
                             Lihat Semua Peralatan

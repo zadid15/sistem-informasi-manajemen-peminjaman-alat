@@ -22,4 +22,9 @@ class AlatUnit extends Model
     {
         return $this->belongsTo(Alat::class, 'alat_id');
     }
+
+    public function detailPeminjaman()
+    {
+        return $this->hasMany(DetailPeminjaman::class, 'id_alat_unit');
+    }
 }

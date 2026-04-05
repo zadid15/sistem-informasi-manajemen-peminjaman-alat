@@ -40,12 +40,14 @@ export default function SubmitLoanRequestPage() {
     }, [state]);
 
     // Ambil batas peminjaman terkecil dari semua item
+    const defaultBatasPeminjaman = 7; 
+    
     const batasPeminjaman = useMemo(() => {
-        if (selectedItems.length === 0) return 7;
+        if (selectedItems.length === 0) return defaultBatasPeminjaman;
         const batasList = selectedItems
-            .map(item => item.alat_unit.alat.batas_peminjaman ?? 7)
+            .map(item => item.alat_unit.alat.batas_peminjaman ?? defaultBatasPeminjaman)
             .filter(b => b > 0);
-        return batasList.length > 0 ? Math.min(...batasList) : 7;
+        return batasList.length > 0 ? Math.min(...batasList) : defaultBatasPeminjaman;
     }, [selectedItems]);
 
     useEffect(() => {
@@ -111,7 +113,7 @@ export default function SubmitLoanRequestPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 px-4">
-            <div className="mx-auto max-w-7xl pt-[150px]">
+            <div className="mx-auto max-w-7xl pt-[200px]">
                 {/* HEADER */}
                 <section className="pb-12 px-6 lg:px-8">
                     <div className="max-w-7xl mx-auto">

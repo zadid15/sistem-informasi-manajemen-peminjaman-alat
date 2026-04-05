@@ -18,7 +18,7 @@ return new class extends Migration
             $table->enum('kondisi', ['Baik', 'Layak Pakai', 'Perlu Perawatan', 'Rusak Ringan', 'Rusak Berat', 'Dalam Servis', 'Tidak Layak Pakai'])->default('Baik');
             $table->enum('status', ['Tersedia', 'Dipinjam', 'Tidak Tersedia'])->default('Tersedia');
             $table->string('lokasi')->nullable();
-            $table->string('qr_code')->nullable()->after('lokasi');
+            $table->string('qr_code')->nullable();
 
             $table->timestamps();
 

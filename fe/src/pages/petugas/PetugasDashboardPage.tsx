@@ -76,6 +76,26 @@ const formatDate = (date: string | null) => {
     return new Date(date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 };
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+const Sk = ({ className }: { className?: string }) => (
+    <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+);
+
+function StatCardSkeleton() {
+    return (
+        <div className="bg-white rounded-xl border p-5 flex items-start gap-4">
+            <Sk className="w-12 h-12 rounded-xl flex-shrink-0" />
+            <div className="space-y-2 flex-1">
+                <Sk className="h-3 w-24" />
+                <Sk className="h-6 w-12" />
+            </div>
+        </div>
+    );
+}
+
+// ─── StatCard ─────────────────────────────────────────────────────────────────
+
 const StatCard = ({ label, value, icon: Icon, color, sub, alert }: {
     label: string; value: number; icon: React.ElementType; color: string; sub?: string; alert?: boolean;
 }) => (
@@ -90,6 +110,8 @@ const StatCard = ({ label, value, icon: Icon, color, sub, alert }: {
         </div>
     </div>
 );
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const getUserFromToken = () => {
     try {
@@ -109,28 +131,46 @@ const getGreeting = () => {
     return "Good Night";
 };
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function PetugasDashboardPage() {
     const [data, setData] = useState<DashboardPetugasData | null>(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+
+    // Dari localStorage — tidak perlu tunggu BE
     const currentUser = getUserFromToken();
 
     useEffect(() => {
-        axiosInstance.get("/dashboard/petugas")
-            .then(res => setData(res.data.data))
-            .catch(() => toast.error("Gagal memuat dashboard"))
-            .finally(() => setLoading(false));
+        const fetchDashboard = async () => {
+            setLoading(true);
+            const start = Date.now();
+
+            try {
+                const res = await axiosInstance.get("/dashboard/petugas");
+                setData(res.data.data);
+            } catch {
+                toast.error("Gagal memuat dashboard");
+            } finally {
+                const elapsed = Date.now() - start;
+                const MIN_LOADING = 800; // 👈 bebas: 600–1200ms enak
+
+                setTimeout(() => {
+                    setLoading(false);
+                }, Math.max(0, MIN_LOADING - elapsed));
+            }
+        };
+
+        fetchDashboard();
     }, []);
 
-    if (loading) return <DashboardSkeleton />;
-    if (!data) return <div className="p-6 text-gray-500">Data tidak tersedia</div>;
-
-    const { statistik } = data;
+    const statistik = data?.statistik;
 
     return (
         <div className="space-y-6">
+
+            {/* Header — statis, langsung tampil */}
             <div className="flex items-start justify-between">
-                {/* Left Section */}
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-gray-900">
                         Dashboard Petugas
@@ -139,20 +179,18 @@ export default function PetugasDashboardPage() {
                         Aktivitas dan pengelolaan peminjaman alat
                     </p>
                 </div>
-
-                {/* Right Section */}
                 <div className="text-right">
-                    <p className="text-md text-gray-500">
-                        {getGreeting()},
-                    </p>
+                    <p className="text-md text-gray-500">{getGreeting()},</p>
                     <p className="text-3xl font-semibold text-gray-800">
                         {currentUser?.nama ?? "Admin"}
                     </p>
                 </div>
             </div>
 
-            {/* Alert */}
-            {(statistik.terkirim > 0 || statistik.menunggu_konfirmasi > 0 || statistik.pengembalian_diajukan > 0 || statistik.terlambat > 0) && (
+            {/* Alert — skeleton saat loading, tampil kalau ada data */}
+            {loading ? (
+                <Sk className="h-16 w-full rounded-xl" />
+            ) : statistik && (statistik.terkirim > 0 || statistik.menunggu_konfirmasi > 0 || statistik.pengembalian_diajukan > 0 || statistik.terlambat > 0) && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
                     <AlertCircle size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
                     <div className="text-md text-amber-800">
@@ -186,35 +224,57 @@ export default function PetugasDashboardPage() {
                 </div>
             )}
 
-            {/* Stat Cards */}
+            {/* Stat Cards — skeleton per card */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Baru Diajukan" value={statistik.terkirim} icon={Send} color="bg-blue-500" alert />
-                <StatCard label="Menunggu Konfirmasi" value={statistik.menunggu_konfirmasi} icon={Clock} color="bg-indigo-500" alert />
-                <StatCard label="Pengembalian Diajukan" value={statistik.pengembalian_diajukan} icon={RotateCcw} color="bg-purple-500" alert />
-                <StatCard label="Terlambat" value={statistik.terlambat} icon={AlertCircle} color="bg-red-500" alert />
-                <StatCard label="User Sedang Meminjam" value={statistik.sedang_dipinjam} icon={Package} color="bg-yellow-500" />
-                <StatCard label="Unit Tersedia" value={statistik.unit_tersedia} icon={CheckCircle2} color="bg-green-500" />
-                <StatCard label="Unit Dipinjam" value={statistik.unit_dipinjam} icon={Box} color="bg-gray-500" />
+                {loading ? (
+                    Array.from({ length: 7 }).map((_, i) => <StatCardSkeleton key={i} />)
+                ) : statistik && (
+                    <>
+                        <StatCard label="Baru Diajukan" value={statistik.terkirim} icon={Send} color="bg-blue-500" alert />
+                        <StatCard label="Menunggu Konfirmasi" value={statistik.menunggu_konfirmasi} icon={Clock} color="bg-indigo-500" alert />
+                        <StatCard label="Pengembalian Diajukan" value={statistik.pengembalian_diajukan} icon={RotateCcw} color="bg-purple-500" alert />
+                        <StatCard label="Terlambat" value={statistik.terlambat} icon={AlertCircle} color="bg-red-500" alert />
+                        <StatCard label="User Sedang Meminjam" value={statistik.sedang_dipinjam} icon={Package} color="bg-yellow-500" />
+                        <StatCard label="Unit Tersedia" value={statistik.unit_tersedia} icon={CheckCircle2} color="bg-green-500" />
+                        <StatCard label="Unit Dipinjam" value={statistik.unit_dipinjam} icon={Box} color="bg-gray-500" />
+                    </>
+                )}
             </div>
 
             {/* Main Content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Perlu Konfirmasi */}
+
+                {/* Perlu Konfirmasi — header statis, isi skeleton */}
                 <div className="lg:col-span-2 bg-white rounded-xl border overflow-hidden">
                     <div className="px-6 py-4 bg-amber-600 text-white font-semibold text-md flex items-center justify-between">
                         <span>Perlu Dikonfirmasi</span>
-                        <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                            {data.perlu_konfirmasi.length}
-                        </span>
+                        {!loading && data && (
+                            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                                {data.perlu_konfirmasi.length}
+                            </span>
+                        )}
                     </div>
-                    {data.perlu_konfirmasi.length === 0 ? (
+                    {loading ? (
+                        <div className="divide-y">
+                            {Array.from({ length: 3 }).map((_, i) => (
+                                <div key={i} className="flex items-center justify-between px-6 py-4">
+                                    <div className="space-y-2 flex-1 min-w-0">
+                                        <Sk className="h-4 w-32" />
+                                        <Sk className="h-3 w-48" />
+                                        <Sk className="h-3 w-40" />
+                                    </div>
+                                    <Sk className="h-6 w-28 rounded-full ml-3 flex-shrink-0" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : data?.perlu_konfirmasi.length === 0 ? (
                         <div className="p-8 text-center">
                             <CheckCircle2 size={32} className="text-green-400 mx-auto mb-2" />
                             <p className="text-sm text-gray-400">Semua sudah dikonfirmasi</p>
                         </div>
                     ) : (
                         <div className="divide-y">
-                            {data.perlu_konfirmasi.map((p) => (
+                            {data?.perlu_konfirmasi.map((p) => (
                                 <div
                                     key={p.id}
                                     onClick={() => navigate(`/petugas/peminjaman/${p.id}`)}
@@ -236,43 +296,62 @@ export default function PetugasDashboardPage() {
                     )}
                 </div>
 
-                {/* Kondisi Unit */}
+                {/* Kondisi Unit — judul statis, chart & legend skeleton */}
                 <div className="bg-white rounded-xl border p-6">
                     <h2 className="text-md font-semibold text-gray-900 mb-4">Kondisi Unit Alat</h2>
-                    <ResponsiveContainer width="100%" height={180}>
-                        <PieChart>
-                            <Pie
-                                data={data.kondisi_unit}
-                                dataKey="total"
-                                nameKey="kondisi"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={75}
-                                labelLine={false}
-                            >
-                                {data.kondisi_unit.map((entry, index) => (
-                                    <Cell key={index} fill={KONDISI_COLORS[entry.kondisi] ?? "#ccc"} />
+                    {loading ? (
+                        <div className="space-y-3">
+                            <Sk className="h-44 w-44 rounded-full mx-auto" />
+                            <div className="mt-3 space-y-2">
+                                {Array.from({ length: 4 }).map((_, i) => (
+                                    <div key={i} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Sk className="w-2.5 h-2.5 rounded-full" />
+                                            <Sk className="h-3 w-24" />
+                                        </div>
+                                        <Sk className="h-3 w-6" />
+                                    </div>
                                 ))}
-                            </Pie>
-                            <Tooltip formatter={(val, name) => [val ?? 0, name]} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                    <div className="mt-3 space-y-1.5">
-                        {data.kondisi_unit.map((k, i) => (
-                            <div key={i} className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                        style={{ backgroundColor: KONDISI_COLORS[k.kondisi] ?? "#ccc" }} />
-                                    <span className="text-sm text-gray-600">{k.kondisi}</span>
-                                </div>
-                                <span className="text-sm font-semibold text-gray-700">{k.total}</span>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ) : (
+                        <>
+                            <ResponsiveContainer width="100%" height={180}>
+                                <PieChart>
+                                    <Pie
+                                        data={data?.kondisi_unit}
+                                        dataKey="total"
+                                        nameKey="kondisi"
+                                        cx="50%"
+                                        cy="50%"
+                                        outerRadius={75}
+                                        labelLine={false}
+                                    >
+                                        {data?.kondisi_unit.map((entry, index) => (
+                                            <Cell key={index} fill={KONDISI_COLORS[entry.kondisi] ?? "#ccc"} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(val, name) => [val ?? 0, name]} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                            <div className="mt-3 space-y-1.5">
+                                {data?.kondisi_unit.map((k, i) => (
+                                    <div key={i} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                                style={{ backgroundColor: KONDISI_COLORS[k.kondisi] ?? "#ccc" }} />
+                                            <span className="text-sm text-gray-600">{k.kondisi}</span>
+                                        </div>
+                                        <span className="text-sm font-semibold text-gray-700">{k.total}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* Dipinjam Sekarang */}
+            {/* Dipinjam Sekarang — header + thead statis, tbody skeleton */}
             <div className="bg-white rounded-xl border overflow-hidden">
                 <div className="px-6 py-4 bg-yellow-500 text-white font-semibold text-md flex items-center justify-between">
                     <span>Sedang Dipinjam</span>
@@ -283,21 +362,35 @@ export default function PetugasDashboardPage() {
                         Lihat Semua
                     </button>
                 </div>
-                {data.dipinjam_sekarang.length === 0 ? (
-                    <div className="p-6 text-center text-sm text-gray-400">Tidak ada peminjaman aktif</div>
-                ) : (
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-200 text-gray-500">
+                <table className="w-full text-sm">
+                    <thead className="bg-gray-200 text-gray-500">
+                        <tr>
+                            <th className="px-6 py-3 text-left font-medium">Peminjam</th>
+                            <th className="px-6 py-3 text-left font-medium">Alat</th>
+                            <th className="px-6 py-3 text-left font-medium">Rencana Kembali</th>
+                            <th className="px-6 py-3 text-left font-medium">Keterlambatan</th>
+                            <th className="px-6 py-3 text-left font-medium"></th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        {loading ? (
+                            Array.from({ length: 3 }).map((_, i) => (
+                                <tr key={i}>
+                                    {Array.from({ length: 5 }).map((__, j) => (
+                                        <td key={j} className="px-6 py-4">
+                                            <Sk className="h-4 w-full" />
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))
+                        ) : data?.dipinjam_sekarang.length === 0 ? (
                             <tr>
-                                <th className="px-6 py-3 text-left font-medium">Peminjam</th>
-                                <th className="px-6 py-3 text-left font-medium">Alat</th>
-                                <th className="px-6 py-3 text-left font-medium">Rencana Kembali</th>
-                                <th className="px-6 py-3 text-left font-medium">Keterlambatan</th>
-                                <th className="px-6 py-3 text-left font-medium"></th>
+                                <td colSpan={5} className="p-6 text-center text-sm text-gray-400">
+                                    Tidak ada peminjaman aktif
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                            {data.dipinjam_sekarang.map((p) => (
+                        ) : (
+                            data?.dipinjam_sekarang.map((p) => (
                                 <tr key={p.id} className={`hover:bg-gray-50 ${p.terlambat ? "bg-red-50" : ""}`}>
                                     <td className="px-6 py-4">
                                         <p className="font-medium text-gray-800">{p.user?.nama}</p>
@@ -323,22 +416,34 @@ export default function PetugasDashboardPage() {
                                         </button>
                                     </td>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
+                            ))
+                        )}
+                    </tbody>
+                </table>
             </div>
 
-            {/* Aktivitas Saya */}
+            {/* Aktivitas Saya — header statis, list skeleton */}
             <div className="bg-white rounded-xl border overflow-hidden">
                 <div className="px-6 py-4 bg-lime-800 text-white font-semibold text-md">
                     Aktivitas Terbaru Saya
                 </div>
-                {data.aktivitas_saya.length === 0 ? (
+                {loading ? (
+                    <div className="divide-y">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="flex items-center justify-between px-6 py-3">
+                                <div className="space-y-2 flex-1">
+                                    <Sk className="h-4 w-32" />
+                                    <Sk className="h-3 w-48" />
+                                </div>
+                                <Sk className="h-6 w-24 rounded-full ml-3" />
+                            </div>
+                        ))}
+                    </div>
+                ) : data?.aktivitas_saya.length === 0 ? (
                     <div className="p-6 text-center text-sm text-gray-400">Belum ada aktivitas</div>
                 ) : (
                     <div className="divide-y">
-                        {data.aktivitas_saya.map((p) => (
+                        {data?.aktivitas_saya.map((p) => (
                             <div
                                 key={p.id}
                                 onClick={() => navigate(`/petugas/peminjaman/${p.id}`)}
@@ -355,44 +460,6 @@ export default function PetugasDashboardPage() {
                         ))}
                     </div>
                 )}
-            </div>
-        </div>
-    );
-}
-
-const Sk = ({ className }: { className?: string }) => (
-    <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
-);
-
-function DashboardSkeleton() {
-    return (
-        <div className="space-y-6">
-            <div className="space-y-2">
-                <Sk className="h-7 w-48" />
-                <Sk className="h-4 w-64" />
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="bg-white rounded-xl border p-5 flex items-start gap-4">
-                        <Sk className="w-12 h-12 rounded-xl" />
-                        <div className="space-y-2 flex-1">
-                            <Sk className="h-3 w-20" />
-                            <Sk className="h-6 w-16" />
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-white rounded-xl border p-6">
-                    <Sk className="h-4 w-40 mb-4" />
-                    <div className="space-y-3">
-                        {Array.from({ length: 4 }).map((_, i) => <Sk key={i} className="h-14 w-full" />)}
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl border p-6">
-                    <Sk className="h-4 w-32 mb-4" />
-                    <Sk className="h-44 w-full rounded-full" />
-                </div>
             </div>
         </div>
     );

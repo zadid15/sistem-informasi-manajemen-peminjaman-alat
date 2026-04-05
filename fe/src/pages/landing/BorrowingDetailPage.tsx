@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, PackageCheck, ChevronDown, ExternalLink } from "lucide-react";
+import { ArrowLeft, PackageCheck, ChevronDown, ExternalLink, CheckCircle } from "lucide-react";
 import { getDetailPeminjaman, ajukanPengembalian } from "../../services/peminjamanService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Badge } from "../../components/ui/badge";
@@ -23,7 +23,6 @@ type Pembayaran = {
 const TIMELINE_STEPS = [
     { key: "terkirim", label: "Terkirim" },
     { key: "menunggu_konfirmasi", label: "Menunggu Konfirmasi" },
-    { key: "disetujui", label: "Disetujui" },
     { key: "dipinjam", label: "Dipinjam" },
     { key: "pengembalian_diajukan", label: "Pengembalian Diajukan" },
     { key: "dikembalikan", label: "Dikembalikan" },
@@ -38,15 +37,28 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
     pengembalian_diajukan: { label: "PENGEMBALIAN DIAJUKAN", color: "text-purple-700", bg: "bg-purple-50", ring: "ring-purple-200" },
     dikembalikan: { label: "DIKEMBALIKAN", color: "text-gray-700", bg: "bg-gray-100", ring: "ring-gray-200" },
     dikembalikan_terlambat: { label: "DIKEMBALIKAN TERLAMBAT", color: "text-orange-700", bg: "bg-orange-50", ring: "ring-orange-200" },
+    menunggu_pembayaran: { label: "MENUNGGU PEMBAYARAN", color: "text-orange-700", bg: "bg-orange-50", ring: "ring-orange-200" },
 };
 
 const fmt = (n: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
+const formatDate = (date: string | null) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+};
+
 function getStepIndex(status: string) {
     if (status === "dikembalikan_terlambat") return TIMELINE_STEPS.length - 1;
+    if (status === "menunggu_pembayaran") return 3;
     return TIMELINE_STEPS.findIndex(step => step.key === status);
 }
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+const Skeleton = ({ className }: { className?: string }) => (
+    <div className={`animate-pulse bg-gray-200 rounded-md ${className}`} />
+);
 
 // ─── Loading Spinner ──────────────────────────────────────────────────────────
 
@@ -59,37 +71,41 @@ function LoadingSpinner() {
     );
 }
 
-// ─── Timeline (versi asli) ────────────────────────────────────────────────────
+// ─── Timeline ────────────────────────────────────────────────────────────────
 
-function BorrowTimeline({ status }: { status: string }) {
-    const currentIndex = getStepIndex(status);
-    const isRejected = status === "ditolak";
+function BorrowTimeline({ status, loading = false }: { status: string; loading?: boolean }) {
+    const currentIndex = loading ? -1 : getStepIndex(status);
+    const isRejected = !loading && status === "ditolak";
 
     return (
         <div className="mt-10 px-4">
             <div className="flex items-center justify-between relative">
                 <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 z-0" />
-                <div
-                    className="absolute top-4 left-0 h-1 bg-green-500 z-0 transition-all duration-300"
-                    style={{ width: `${(currentIndex / (TIMELINE_STEPS.length - 1)) * 100}%` }}
-                />
+                {!loading && (
+                    <div
+                        className="absolute top-4 left-0 h-1 bg-green-500 z-0 transition-all duration-300"
+                        style={{ width: `${(currentIndex / (TIMELINE_STEPS.length - 1)) * 100}%` }}
+                    />
+                )}
                 {TIMELINE_STEPS.map((step, index) => {
-                    const isDone = index < currentIndex || (currentIndex === TIMELINE_STEPS.length - 1 && index === currentIndex);
-                    const isActive = index === currentIndex && !isRejected && index !== TIMELINE_STEPS.length - 1;
+                    const isDone = !loading && (index < currentIndex || (currentIndex === TIMELINE_STEPS.length - 1 && index === currentIndex));
+                    const isActive = !loading && index === currentIndex && !isRejected && index !== TIMELINE_STEPS.length - 1;
+
                     return (
                         <div key={step.key} className="flex-1 flex flex-col items-center z-10 relative group">
-                            {/* Pulse ring — hanya tampil kalau isActive */}
                             {isActive && (
                                 <span className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-blue-400 opacity-50 animate-ping z-0" />
                             )}
-                            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-md font-bold shadow-md
-                                ${isRejected && index <= currentIndex ? "bg-red-500 text-white"
-                                    : isDone ? "bg-green-500 text-white"
-                                        : isActive ? "bg-blue-500 text-white"
-                                            : "bg-gray-200 text-gray-500"
-                                } transition-colors duration-300`}
+                            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-md font-bold shadow-md transition-colors duration-300
+                                ${loading
+                                    ? "bg-gray-200 text-gray-400"
+                                    : isRejected && index <= currentIndex ? "bg-red-500 text-white"
+                                        : isDone ? "bg-green-500 text-white"
+                                            : isActive ? "bg-blue-500 text-white"
+                                                : "bg-gray-200 text-gray-500"
+                                }`}
                             >
-                                {isDone ? "✓" : index + 1}
+                                {!loading && isDone ? "✓" : index + 1}
                             </div>
                             <div className="absolute bottom-full mb-2 w-max px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                                 {step.label}
@@ -102,6 +118,7 @@ function BorrowTimeline({ status }: { status: string }) {
         </div>
     );
 }
+
 // ─── Payment Section ──────────────────────────────────────────────────────────
 
 type DendaItem = {
@@ -128,12 +145,24 @@ function PembayaranDendaSection({
     const statusKey = !pembayaran ? "none" : pembayaran.status;
     const isDone = statusKey === "lunas" || statusKey === "manual";
 
+    const formatMetode = (metode: string | null) => {
+        const map: Record<string, string> = {
+            qris: "QRIS",
+            qr_code: "QRIS",
+            ewallet: "E-Wallet",
+            virtual_account: "Virtual Account",
+            manual: "Transfer Manual",
+            unknown: "Lainnya",
+        };
+        return metode ? (map[metode] ?? metode) : "-";
+    };
+
     const statusInfo = {
-        none: { label: "Belum Dibayar", color: "text-red-600", bg: "bg-red-50", dot: "bg-red-500" },
-        pending: { label: "Menunggu Pembayaran", color: "text-amber-600", bg: "bg-amber-50", dot: "bg-amber-500" },
-        expired: { label: "Kedaluwarsa", color: "text-gray-500", bg: "bg-gray-50", dot: "bg-gray-400" },
-        lunas: { label: "Lunas", color: "text-emerald-600", bg: "bg-emerald-50", dot: "bg-emerald-500" },
-        manual: { label: "Dikonfirmasi Manual", color: "text-emerald-600", bg: "bg-emerald-50", dot: "bg-emerald-500" },
+        none: { label: "BELUM DIBAYAR", color: "text-red-600", bg: "bg-red-50", dot: "bg-red-500" },
+        pending: { label: "MENUNGGU PEMBAYARAN", color: "text-amber-600", bg: "bg-amber-50", dot: "bg-amber-500" },
+        expired: { label: "KADALUARSA", color: "text-gray-500", bg: "bg-gray-50", dot: "bg-gray-400" },
+        lunas: { label: "LUNAS", color: "text-emerald-600", bg: "bg-emerald-50", dot: "bg-emerald-500" },
+        manual: { label: "LUNAS", color: "text-emerald-600", bg: "bg-emerald-50", dot: "bg-emerald-500" },
     }[statusKey] ?? { label: "-", color: "text-gray-500", bg: "bg-gray-50", dot: "bg-gray-400" };
 
     return (
@@ -178,7 +207,7 @@ function PembayaranDendaSection({
                         disabled={buatInvoiceLoading}
                         className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                        {buatInvoiceLoading ? <><LoadingSpinner />Memproses...</> : "⚡ Bayar Sekarang"}
+                        {buatInvoiceLoading ? <><LoadingSpinner />Memproses...</> : "Bayar Sekarang"}
                     </button>
                 )}
                 {statusKey === "pending" && (
@@ -200,10 +229,12 @@ function PembayaranDendaSection({
                 )}
                 {isDone && (
                     <div className="text-center py-2">
-                        <div className="text-2xl mb-1">✓</div>
-                        <p className="text-sm font-semibold text-emerald-700">Pembayaran Selesai</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                            {statusKey === "manual" ? "Dikonfirmasi oleh petugas" : `via ${pembayaran?.metode ?? "—"}`}
+                        <div className="flex justify-center mb-2">
+                            <CheckCircle className="w-10 h-10 text-emerald-500" />
+                        </div>
+                        <p className="text-lg font-semibold text-emerald-700">Pembayaran Selesai</p>
+                        <p className="text-md text-gray-400 mt-0.5">
+                            {statusKey === "manual" ? "Dibayar tunai · dikonfirmasi petugas" : `via ${formatMetode(pembayaran?.metode ?? null)}`}
                         </p>
                     </div>
                 )}
@@ -232,13 +263,13 @@ function InfoCard({ label, value, mono }: { label: string; value: React.ReactNod
 function KondisiBadge({ kondisi }: { kondisi: string | null | undefined }) {
     if (!kondisi || kondisi === "-") return <span className="text-xs text-gray-400">—</span>;
     const colorMap: Record<string, string> = {
-        baik: "bg-green-100 text-green-700",
-        "rusak ringan": "bg-yellow-100 text-yellow-700",
-        "rusak berat": "bg-red-100 text-red-700",
-        hilang: "bg-gray-900 text-white",
+        baik: "bg-green-100 text-green-700 uppercase",
+        "rusak ringan": "bg-yellow-100 text-yellow-700 uppercase",
+        "rusak berat": "bg-red-100 text-red-700 uppercase",
+        hilang: "bg-gray-900 text-white uppercase",
     };
     const color = colorMap[kondisi.toLowerCase()] ?? "bg-gray-100 text-gray-600";
-    return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>{kondisi}</span>;
+    return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs text-center font-medium ${color}`}>{kondisi}</span>;
 }
 
 // ─── Ketentuan Denda ──────────────────────────────────────────────────────────
@@ -257,14 +288,13 @@ function KetentuanDenda() {
                 </div>
                 <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
             </button>
-
             {open && (
                 <div className="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-gray-100 pt-4">
                     {[
-                        { icon: "⏰", label: "Keterlambatan", desc: "1% dari harga alat per hari", example: "Rp 500.000 × 3 hari → Rp 15.000", color: "border-orange-200 bg-orange-50", textColor: "text-orange-800", subColor: "text-orange-500" },
-                        { icon: "🔧", label: "Rusak Ringan", desc: "25% dari harga alat", example: "Rp 500.000 → Rp 125.000", color: "border-yellow-200 bg-yellow-50", textColor: "text-yellow-800", subColor: "text-yellow-500" },
-                        { icon: "💥", label: "Rusak Berat", desc: "60% dari harga alat", example: "Rp 500.000 → Rp 300.000", color: "border-red-200 bg-red-50", textColor: "text-red-800", subColor: "text-red-500" },
-                        { icon: "🚫", label: "Hilang", desc: "100% dari harga alat", example: "Rp 500.000 → Rp 500.000", color: "border-gray-700 bg-gray-900", textColor: "text-white", subColor: "text-gray-400" },
+                        { icon: "⏰", label: "KETERLAMBATAN", desc: "1% dari harga alat per hari", example: "Rp 500.000 × 3 hari → Rp 15.000", color: "border-orange-200 bg-orange-50", textColor: "text-orange-800", subColor: "text-orange-500" },
+                        { icon: "🔧", label: "RUSAK RINGAN", desc: "25% dari harga alat", example: "Rp 500.000 → Rp 125.000", color: "border-yellow-200 bg-yellow-50", textColor: "text-yellow-800", subColor: "text-yellow-500" },
+                        { icon: "💥", label: "RUSAK BERAT", desc: "60% dari harga alat", example: "Rp 500.000 → Rp 300.000", color: "border-red-200 bg-red-50", textColor: "text-red-800", subColor: "text-red-500" },
+                        { icon: "🚫", label: "HILANG", desc: "100% dari harga alat", example: "Rp 500.000 → Rp 500.000", color: "border-gray-700 bg-gray-900", textColor: "text-white", subColor: "text-gray-400" },
                     ].map(item => (
                         <div key={item.label} className={`rounded-lg border p-3.5 ${item.color}`}>
                             <div className="flex items-center gap-2 mb-1">
@@ -281,65 +311,6 @@ function KetentuanDenda() {
                     </div>
                 </div>
             )}
-        </div>
-    );
-}
-
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-
-const Skeleton = ({ className }: { className?: string }) => (
-    <div className={`animate-pulse bg-gray-200 rounded-md ${className}`} />
-);
-
-function BorrowingDetailSkeleton() {
-    return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-36 pb-6">
-                    <Skeleton className="h-4 w-40 mb-6" />
-                    <div className="flex items-start justify-between gap-4">
-                        <div><Skeleton className="h-12 w-130 mb-2" /></div>
-                        <Skeleton className="h-8 w-36 rounded-full" />
-                    </div>
-                    <div className="mt-10 flex justify-between gap-4 pb-2">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className="flex flex-col items-center gap-2 flex-1">
-                                <Skeleton className="w-10 h-10 rounded-full" />
-                                <Skeleton className="h-3 w-16" />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-            <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-5">
-                        <div className="bg-white rounded-xl border border-gray-200 p-5">
-                            <Skeleton className="h-4 w-40 mb-4" />
-                            <div className="grid grid-cols-4 gap-4">
-                                {Array.from({ length: 4 }).map((_, i) => (
-                                    <div key={i}><Skeleton className="h-3 w-20 mb-2" /><Skeleton className="h-4 w-28" /></div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                            <div className="px-5 py-4 border-b"><Skeleton className="h-4 w-40" /></div>
-                            <div className="p-5 space-y-3">
-                                {Array.from({ length: 3 }).map((_, i) => (
-                                    <div key={i} className="grid grid-cols-6 gap-3">
-                                        <Skeleton className="h-4 col-span-2" /><Skeleton className="h-4" /><Skeleton className="h-4" /><Skeleton className="h-4" /><Skeleton className="h-6 w-16 rounded-full" />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="space-y-5">
-                        <div className="bg-white rounded-xl border border-gray-200 p-5">
-                            <Skeleton className="h-3 w-24 mb-3" /><Skeleton className="h-16 rounded-lg" />
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 }
@@ -401,13 +372,10 @@ export default function BorrowingDetailPage() {
         finally { setSubmitting(false); }
     };
 
-    if (loading) return <BorrowingDetailSkeleton />;
-    if (!data) return <div className="p-6 text-gray-500">Data tidak ditemukan</div>;
-
-    const config = STATUS_CONFIG[data.status];
-    const hasDenda = data.status === "dikembalikan" || data.status === "dikembalikan_terlambat";
+    const config = data ? STATUS_CONFIG[data.status] : null;
+    const hasDenda = data && (data.status === "dikembalikan" || data.status === "dikembalikan_terlambat" || data.status === "menunggu_pembayaran");
     const dendaItems: DendaItem[] = hasDenda
-        ? data.detail_peminjaman
+        ? data!.detail_peminjaman
             .filter(item => item.total_denda && Number(item.total_denda) > 0)
             .map(item => ({
                 id: item.id,
@@ -419,12 +387,18 @@ export default function BorrowingDetailPage() {
             }))
         : [];
 
+    const INFO_LABELS = [
+        "Tanggal Pinjam", "Rencana Pengembalian",
+        "Tanggal Kembali", "Catatan",
+        "Penyetuju Peminjaman", "Penerima Pengembalian"
+    ];
+
     return (
         <div className="min-h-screen bg-gray-50">
 
             {/* ── TOP HEADER ── */}
             <div className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-36 pb-6">
+                <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-52 pb-6">
                     <Link
                         to="/list-peminjaman"
                         className="inline-flex items-center gap-1.5 text-md text-gray-500 hover:text-gray-800 font-medium group mb-6"
@@ -434,51 +408,31 @@ export default function BorrowingDetailPage() {
                     </Link>
 
                     <div className="flex items-start justify-between gap-4 flex-wrap">
-                        <div>
-                            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Detail Peminjaman ID {data.id}</h1>
-                        </div>
-                        {config && (
-                            <span className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-semibold ring-1 ${config.bg} ${config.color} ${config.ring}`}>
-                                <span className="w-2 h-2 rounded-full bg-current opacity-70" />
-                                {config.label}
-                            </span>
-                        )}
+                        <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Detail Peminjaman</h1>
+                        {loading
+                            ? <Skeleton className="h-8 w-36 rounded-full" />
+                            : config && (
+                                <span className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-semibold ring-1 ${config.bg} ${config.color} ${config.ring}`}>
+                                    <span className="w-2 h-2 rounded-full bg-current opacity-70" />
+                                    {config.label}
+                                </span>
+                            )
+                        }
                     </div>
 
-                    {/* Timeline asli */}
-                    <BorrowTimeline status={data.status} />
+                    <BorrowTimeline status={data?.status ?? ""} loading={loading} />
                 </div>
             </div>
 
-            {/* ── BODY: 2-COLUMN ── */}
+            {/* ── BODY ── */}
             <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* ─── LEFT ─── */}
                     <div className="lg:col-span-2 space-y-5">
 
-                        {/* Info umum */}
-                        <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                            {/* Header */}
-                            <div className="bg-green-800 px-5 py-3">
-                                <p className="text-md font-semibold text-white">
-                                    Informasi Peminjaman
-                                </p>
-                            </div>
-
-                            {/* Body */}
-                            <div className="bg-white p-5">
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-4">
-                                    <InfoCard label="Tanggal Pinjam" value={data.tanggal_pinjam} />
-                                    <InfoCard label="Rencana Kembali" value={data.rencana_pengembalian} />
-                                    <InfoCard label="Tanggal Dikembalikan" value={data.tanggal_kembali ?? "—"} />
-                                    <InfoCard label="Catatan" value={data.catatan ?? "—"} />
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Alasan penolakan */}
-                        {data.status === "ditolak" && data.alasan_penolakan && (
+                        {!loading && data?.status === "ditolak" && data.alasan_penolakan && (
                             <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
                                 <span className="text-red-400 text-lg flex-shrink-0">✕</span>
                                 <div>
@@ -488,19 +442,44 @@ export default function BorrowingDetailPage() {
                             </div>
                         )}
 
+                        {/* Info umum */}
+                        <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <div className="bg-lime-800 px-5 py-3">
+                                <p className="text-md font-semibold text-white">Informasi Peminjaman</p>
+                            </div>
+                            <div className="bg-white p-5">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {loading
+                                        ? INFO_LABELS.map(label => (
+                                            <div key={label} className="space-y-1">
+                                                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</p>
+                                                <Skeleton className="h-4 w-28" />
+                                            </div>
+                                        ))
+                                        : (
+                                            <>
+                                                <InfoCard label="Tanggal Pinjam" value={formatDate(data!.tanggal_pinjam)} />
+                                                <InfoCard label="Rencana Pengembalian" value={formatDate(data!.rencana_pengembalian)} />
+                                                <InfoCard label="Tanggal Kembali" value={formatDate(data!.tanggal_kembali)} />
+                                                <InfoCard label="Catatan" value={data!.catatan} />
+                                                <InfoCard label={data!.status === "ditolak" ? "Penolak Peminjaman" : "Penyetuju Peminjaman"} value={data!.approver?.nama || "-"} />
+                                                <InfoCard label="Penerima Pengembalian" value={data!.receiver?.nama || "-"} />
+                                            </>
+                                        )
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Tabel alat */}
                         <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                            {/* Header */}
-                            <div className="bg-green-800 px-5 py-3 flex items-center justify-between">
-                                <p className="text-md font-semibold text-white">
-                                    Daftar Alat Dipinjam
-                                </p>
-                                <span className="text-xs bg-white/20 text-white px-2.5 py-1 rounded-full">
-                                    {data.detail_peminjaman.length} item
-                                </span>
+                            <div className="bg-lime-800 px-5 py-3 flex items-center justify-between">
+                                <p className="text-md font-semibold text-white">Daftar Alat Dipinjam</p>
+                                {loading
+                                    ? <Skeleton className="h-5 w-12 rounded-full bg-white/20" />
+                                    : <span className="text-xs bg-white/20 text-white px-2.5 py-1 rounded-full">{data!.detail_peminjaman.length} item</span>
+                                }
                             </div>
-
-                            {/* Body */}
                             <div className="bg-white overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
@@ -510,73 +489,68 @@ export default function BorrowingDetailPage() {
                                             <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kondisi Awal</th>
                                             <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kondisi Akhir</th>
                                             <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Harga</th>
+                                            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
                                             <th className="px-5 py-3" />
                                         </tr>
                                     </thead>
-
                                     <tbody className="divide-y divide-gray-50">
-                                        {data.detail_peminjaman.map((item: DetailPeminjaman, idx: number) => (
-                                            <tr
-                                                key={item.id}
-                                                className={`transition-colors ${idx % 2 === 1 ? "bg-gray-50/40" : "bg-white"
-                                                    } hover:bg-blue-50/30`}
-                                            >
-                                                <td className="px-5 py-3.5">
-                                                    <p className="font-medium text-sm text-gray-900">
-                                                        {item.alat_unit.alat.nama_alat}
-                                                    </p>
-                                                    <p className="text-xs text-gray-400 mt-0.5 font-mono">
-                                                        {item.alat_unit.kode_unit}
-                                                    </p>
-                                                </td>
-
-                                                <td className="px-5 py-3.5 text-gray-500 text-sm">
-                                                    {item.alat_unit.lokasi}
-                                                </td>
-
-                                                <td className="px-5 text-sm py-3.5">
-                                                    <KondisiBadge kondisi={formatKondisi(item.kondisi_sebelum)} />
-                                                </td>
-
-                                                <td className="px-5 text-sm py-3.5">
-                                                    <KondisiBadge kondisi={formatKondisi(item.kondisi_sesudah)} />
-                                                </td>
-
-                                                <td className="px-5 py-3.5 text-gray-700 text-sm font-medium">
-                                                    {item.alat_unit.alat.harga
-                                                        ? fmt(Number(item.alat_unit.alat.harga))
-                                                        : "—"}
-                                                </td>
-
-                                                <td className="px-5 py-3.5">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="cursor-pointer text-sm h-7 px-3 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600"
-                                                        onClick={() => {
-                                                            setSelectedUnit(item.alat_unit);
-                                                            setShowDetailModal(true);
-                                                        }}
+                                        {loading
+                                            ? Array.from({ length: 3 }).map((_, i) => (
+                                                <tr key={i} className={i % 2 === 1 ? "bg-gray-50/40" : "bg-white"}>
+                                                    <td className="px-5 py-3.5">
+                                                        <Skeleton className="h-4 w-32 mb-1.5" />
+                                                        <Skeleton className="h-3 w-20" />
+                                                    </td>
+                                                    <td className="px-5 py-3.5"><Skeleton className="h-4 w-20" /></td>
+                                                    <td className="px-5 py-3.5"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                                                    <td className="px-5 py-3.5"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                                                    <td className="px-5 py-3.5"><Skeleton className="h-4 w-24" /></td>
+                                                    <td className="px-5 py-3.5"><Skeleton className="h-7 w-14 rounded-full" /></td>
+                                                    <td className="px-5 py-3.5" />
+                                                </tr>
+                                            ))
+                                            : data!.detail_peminjaman.length === 0
+                                                ? (
+                                                    <tr>
+                                                        <td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">
+                                                            Tidak ada alat
+                                                        </td>
+                                                    </tr>
+                                                )
+                                                : data!.detail_peminjaman.map((item: DetailPeminjaman, idx: number) => (
+                                                    <tr
+                                                        key={item.id}
+                                                        className={`transition-colors ${idx % 2 === 1 ? "bg-gray-50/40" : "bg-white"} hover:bg-blue-50/30`}
                                                     >
-                                                        Detail
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-
-                                        {data.detail_peminjaman.length === 0 && (
-                                            <tr>
-                                                <td colSpan={6} className="px-5 py-10 text-center text-gray-400 text-sm">
-                                                    Tidak ada alat
-                                                </td>
-                                            </tr>
-                                        )}
+                                                        <td className="px-5 py-3.5">
+                                                            <p className="font-medium text-sm text-gray-900">{item.alat_unit.alat.nama_alat}</p>
+                                                            <p className="text-xs text-gray-400 mt-0.5 font-mono">{item.alat_unit.kode_unit}</p>
+                                                        </td>
+                                                        <td className="px-5 py-3.5 text-gray-500 text-sm">{item.alat_unit.lokasi}</td>
+                                                        <td className="px-5 text-sm py-3.5"><KondisiBadge kondisi={formatKondisi(item.kondisi_sebelum)} /></td>
+                                                        <td className="px-5 text-sm py-3.5"><KondisiBadge kondisi={formatKondisi(item.kondisi_sesudah)} /></td>
+                                                        <td className="px-5 py-3.5 text-gray-700 text-sm font-medium">
+                                                            {item.alat_unit.alat.harga ? fmt(Number(item.alat_unit.alat.harga)) : "—"}
+                                                        </td>
+                                                        <td className="px-5 py-3.5">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="cursor-pointer text-sm h-7 px-3 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600"
+                                                                onClick={() => { setSelectedUnit(item.alat_unit); setShowDetailModal(true); }}
+                                                            >
+                                                                Detail
+                                                            </Button>
+                                                        </td>
+                                                        <td className="px-5 py-3.5" />
+                                                    </tr>
+                                                ))
+                                        }
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
-                        {/* Ketentuan denda */}
                         <KetentuanDenda />
                     </div>
 
@@ -586,29 +560,33 @@ export default function BorrowingDetailPage() {
                         {/* Status card */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                             <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Status</p>
-                            {config && (
-                                <div className={`rounded-lg p-3.5 ${config.bg}`}>
-                                    <p className={`text-md font-bold ${config.color}`}>{config.label}</p>
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        {data.status === "dipinjam" && "Alat sedang dalam penggunaan"}
-                                        {data.status === "disetujui" && "Silakan ambil alat dari petugas"}
-                                        {data.status === "terkirim" && "Permohonan telah dikirim"}
-                                        {data.status === "menunggu_konfirmasi" && "Menunggu persetujuan petugas"}
-                                        {data.status === "pengembalian_diajukan" && "Menunggu konfirmasi petugas"}
-                                        {data.status === "dikembalikan" && "Proses peminjaman selesai"}
-                                        {data.status === "dikembalikan_terlambat" && "Dikembalikan melebihi batas waktu"}
-                                        {data.status === "ditolak" && "Permohonan tidak disetujui"}
-                                    </p>
-                                </div>
-                            )}
+                            {loading
+                                ? <Skeleton className="h-16 rounded-lg" />
+                                : config && (
+                                    <div className={`rounded-lg p-3.5 ${config.bg}`}>
+                                        <p className={`text-md font-bold ${config.color}`}>{config.label}</p>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            {data!.status === "dipinjam" && "Alat sedang dalam proses peminjaman"}
+                                            {data!.status === "disetujui" && "Silakan ambil alat dari petugas"}
+                                            {data!.status === "terkirim" && "Permohonan telah dikirim"}
+                                            {data!.status === "menunggu_konfirmasi" && "Menunggu persetujuan petugas"}
+                                            {data!.status === "pengembalian_diajukan" && "Menunggu konfirmasi petugas"}
+                                            {data!.status === "dikembalikan" && "Proses peminjaman selesai"}
+                                            {data!.status === "dikembalikan_terlambat" && "Dikembalikan melebihi batas waktu"}
+                                            {data!.status === "ditolak" && "Permohonan tidak disetujui"}
+                                            {data!.status === "menunggu_pembayaran" && "Harap selesaikan pembayaran denda terlebih dahulu"}
+                                        </p>
+                                    </div>
+                                )
+                            }
                         </div>
 
                         {/* Ajukan pengembalian */}
-                        {data.status === "dipinjam" && (
+                        {!loading && data?.status === "dipinjam" && (
                             <div className="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
                                 <div className="px-5 py-4 bg-amber-50 border-b border-amber-100">
-                                    <p className="text-sm font-semibold text-amber-900">Selesai menggunakan alat?</p>
-                                    <p className="text-xs text-amber-700 mt-1">Ajukan pengembalian agar petugas dapat memproses konfirmasi.</p>
+                                    <p className="text-md font-semibold text-amber-900">Selesai menggunakan alat?</p>
+                                    <p className="text-sm text-amber-700 mt-1">Ajukan pengembalian agar petugas dapat memproses konfirmasi.</p>
                                 </div>
                                 <div className="p-4">
                                     <button
@@ -623,20 +601,20 @@ export default function BorrowingDetailPage() {
                         )}
 
                         {/* Pengembalian diajukan */}
-                        {data.status === "pengembalian_diajukan" && (
+                        {!loading && data?.status === "pengembalian_diajukan" && (
                             <div className="bg-white rounded-xl border border-purple-200 shadow-sm p-5 flex items-start gap-3">
                                 <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-purple-600 text-sm">⏳</span>
+                                    <span className="text-purple-600 text-md">⏳</span>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-semibold text-purple-900">Pengembalian Diproses</p>
-                                    <p className="text-xs text-purple-600 mt-1">Serahkan alat ke petugas dan tunggu konfirmasi.</p>
+                                    <p className="text-md font-semibold text-purple-900">Pengembalian Diproses</p>
+                                    <p className="text-sm text-purple-600 mt-1">Serahkan alat ke petugas dan tunggu konfirmasi.</p>
                                 </div>
                             </div>
                         )}
 
                         {/* Denda */}
-                        {hasDenda && (
+                        {!loading && hasDenda && (
                             dendaItems.length > 0 ? (
                                 <PembayaranDendaSection
                                     items={dendaItems}
@@ -661,7 +639,7 @@ export default function BorrowingDetailPage() {
             </div>
 
             {/* ── MODAL DETAIL UNIT ── */}
-            {selectedUnit && (
+            {!loading && selectedUnit && (
                 <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
                     <DialogContent className="max-w-2xl">
                         <DialogHeader>
@@ -718,74 +696,71 @@ export default function BorrowingDetailPage() {
             )}
 
             {/* ── MODAL KONFIRMASI PENGEMBALIAN ── */}
-            <Dialog open={showKonfirmasiModal} onOpenChange={(open) => {
-                setShowKonfirmasiModal(open);
-                if (!open) { setCheckKondisiBaik(false); setCheckAdaMasalah(false); }
-            }}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-base">Konfirmasi Pengembalian</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-1">
-                        <p className="text-sm text-gray-500">Pastikan semua alat berikut sudah siap dikembalikan:</p>
-
-                        <div className="bg-gray-50 rounded-lg p-3.5 space-y-2">
-                            {data.detail_peminjaman.map((item) => (
-                                <div key={item.id} className="flex items-center gap-2 text-sm">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                                    <span className="text-gray-700 font-medium">{item.alat_unit.alat.nama_alat}</span>
-                                    <span className="text-gray-400 font-mono text-xs">{item.alat_unit.kode_unit}</span>
-                                </div>
-                            ))}
+            {!loading && data && (
+                <Dialog open={showKonfirmasiModal} onOpenChange={(open) => {
+                    setShowKonfirmasiModal(open);
+                    if (!open) { setCheckKondisiBaik(false); setCheckAdaMasalah(false); }
+                }}>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="text-3xl">Konfirmasi Pengembalian</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 mt-1">
+                            <p className="text-md text-gray-500">Pastikan semua alat berikut sudah siap dikembalikan:</p>
+                            <div className="bg-gray-50 rounded-lg p-3.5 space-y-2">
+                                {data.detail_peminjaman.map((item) => (
+                                    <div key={item.id} className="flex items-center gap-2 text-sm">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                                        <span className="text-gray-700 font-medium">{item.alat_unit.alat.nama_alat}</span>
+                                        <span className="text-gray-400 font-mono text-xs">{item.alat_unit.kode_unit}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="space-y-2">
+                                <label className="flex items-start gap-3 cursor-pointer bg-green-50 border border-green-200 rounded-lg p-3.5 hover:bg-green-100/70 transition">
+                                    <input type="checkbox" checked={checkKondisiBaik}
+                                        onChange={(e) => { setCheckKondisiBaik(e.target.checked); if (e.target.checked) setCheckAdaMasalah(false); }}
+                                        className="mt-0.5 h-4 w-4 accent-green-600 cursor-pointer flex-shrink-0"
+                                    />
+                                    <span className="text-sm text-green-800">Semua alat dalam kondisi baik dan siap dikembalikan</span>
+                                </label>
+                                <label className="flex items-start gap-3 cursor-pointer bg-red-50 border border-red-200 rounded-lg p-3.5 hover:bg-red-100/70 transition">
+                                    <input type="checkbox" checked={checkAdaMasalah}
+                                        onChange={(e) => { setCheckAdaMasalah(e.target.checked); if (e.target.checked) setCheckKondisiBaik(false); }}
+                                        className="mt-0.5 h-4 w-4 accent-red-600 cursor-pointer flex-shrink-0"
+                                    />
+                                    <span className="text-sm text-red-800">Ada alat yang rusak atau hilang — saya siap menanggung denda</span>
+                                </label>
+                                {checkAdaMasalah && (
+                                    <div className="bg-red-50 border border-red-100 rounded-lg p-3.5 text-sm text-red-700 grid grid-cols-2 gap-1.5">
+                                        <span>• Rusak ringan: 25%</span>
+                                        <span>• Rusak berat: 60%</span>
+                                        <span>• Hilang: 100%</span>
+                                        <span>• Terlambat: 1%/hari</span>
+                                        <p className="col-span-2 text-red-500 mt-1">Petugas akan menentukan kondisi akhir.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                                <button
+                                    onClick={handleAjukanPengembalian}
+                                    disabled={!checkKonfirmasi || submitting}
+                                    className="flex-1 py-2.5 cursor-pointer rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    {submitting ? "Mengajukan..." : "Ajukan Pengembalian"}
+                                </button>
+                                <button
+                                    onClick={() => setShowKonfirmasiModal(false)}
+                                    disabled={submitting}
+                                    className="flex-1 py-2.5 cursor-pointer rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition"
+                                >
+                                    Batal
+                                </button>
+                            </div>
                         </div>
-
-                        <div className="space-y-2">
-                            <label className="flex items-start gap-3 cursor-pointer bg-green-50 border border-green-200 rounded-lg p-3.5 hover:bg-green-100/70 transition">
-                                <input type="checkbox" checked={checkKondisiBaik}
-                                    onChange={(e) => { setCheckKondisiBaik(e.target.checked); if (e.target.checked) setCheckAdaMasalah(false); }}
-                                    className="mt-0.5 h-4 w-4 accent-green-600 cursor-pointer flex-shrink-0"
-                                />
-                                <span className="text-sm text-green-800">Semua alat dalam kondisi baik dan siap dikembalikan</span>
-                            </label>
-
-                            <label className="flex items-start gap-3 cursor-pointer bg-red-50 border border-red-200 rounded-lg p-3.5 hover:bg-red-100/70 transition">
-                                <input type="checkbox" checked={checkAdaMasalah}
-                                    onChange={(e) => { setCheckAdaMasalah(e.target.checked); if (e.target.checked) setCheckKondisiBaik(false); }}
-                                    className="mt-0.5 h-4 w-4 accent-red-600 cursor-pointer flex-shrink-0"
-                                />
-                                <span className="text-sm text-red-800">Ada alat yang rusak atau hilang — saya siap menanggung denda</span>
-                            </label>
-
-                            {checkAdaMasalah && (
-                                <div className="bg-red-50 border border-red-100 rounded-lg p-3.5 text-xs text-red-700 grid grid-cols-2 gap-1.5">
-                                    <span>• Rusak ringan: 25%</span>
-                                    <span>• Rusak berat: 60%</span>
-                                    <span>• Hilang: 100%</span>
-                                    <span>• Terlambat: 1%/hari</span>
-                                    <p className="col-span-2 text-red-500 mt-1">Petugas akan menentukan kondisi akhir.</p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex gap-2 pt-1">
-                            <button
-                                onClick={handleAjukanPengembalian}
-                                disabled={!checkKonfirmasi || submitting}
-                                className="flex-1 py-2.5 cursor-pointer rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                                {submitting ? "Mengajukan..." : "Ajukan Pengembalian"}
-                            </button>
-                            <button
-                                onClick={() => setShowKonfirmasiModal(false)}
-                                disabled={submitting}
-                                className="flex-1 py-2.5 cursor-pointer rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition"
-                            >
-                                Batal
-                            </button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }

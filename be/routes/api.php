@@ -3,6 +3,7 @@
 use App\Http\Controllers\AlatController;
 use App\Http\Controllers\AlatUnitController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BannerController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CartItemController;
 use App\Http\Controllers\DashboardController;
@@ -27,6 +28,8 @@ Route::post('/check-email', [AuthController::class, 'checkEmail']);
 Route::get('/list-kategori', [KategoriController::class, 'kategoriForUserWithoutLogin']);
 Route::get('/list-alat', [AlatController::class, 'getListAlatForUserWithoudLogin']);
 Route::get('/detail-alat/{id}', [AlatController::class, 'showWithoutLogin']);
+Route::get('/banners', [BannerController::class, 'index']);
+Route::get('/alat-populer', [AlatController::class, 'getAlatPopuler']);
 
 // Webhook - tanpa auth middleware!
 Route::post('/webhook/xendit', [PembayaranController::class, 'webhook']);
@@ -74,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin
     Route::delete('/peminjaman/{id}', [PeminjamanController::class, 'destroy']);
+    Route::get('/alat-unit/cari-kode/{kode}', [AlatUnitController::class, 'cariByKode']);
 
     // Cart
     Route::get('/cart', [CartController::class, 'index']);
@@ -96,5 +100,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/peminjaman/{id}/pembayaran', [PembayaranController::class, 'show']);
 
     // Petugas
-    Route::post('/peminjaman/{id}/konfirmasi-pembayaran', [PembayaranController::class, 'konfirmasiManual']);
+    Route::post('/peminjaman/{id}/konfirmasi-manual', [PembayaranController::class, 'konfirmasiManual']);
+    Route::get('/peminjaman/laporan', [PeminjamanController::class, 'laporanPdf']);
+
+    Route::get('/banners/all', [BannerController::class, 'indexAdmin']);
+    Route::post('/banners', [BannerController::class, 'store']);
+    Route::post('/banners/{banner}', [BannerController::class, 'update']); // POST karena ada file upload
+    Route::delete('/banners/{banner}', [BannerController::class, 'destroy']);
 });

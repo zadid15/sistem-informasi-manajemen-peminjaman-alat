@@ -64,16 +64,18 @@ class AlatUnitController extends Controller
 
         DB::beginTransaction();
         try {
-
             $lastNumber = AlatUnit::where('alat_id', $alat->id)
                 ->lockForUpdate()
                 ->max('nomor_urut') ?? 0;
 
+            $prefix = strtoupper(substr($alat->nama_alat, 0, 3));
+
             for ($i = 1; $i <= $data['jumlah_unit']; $i++) {
                 $num = $lastNumber + $i;
 
-                $kodeUnit = strtoupper(substr($alat->nama_alat, 0, 3))
-                    . '-' . str_pad($num, 3, '0', STR_PAD_LEFT);
+                $kodeUnit = $prefix
+                    . '-' . str_pad($alat->id, 3, '0', STR_PAD_LEFT)
+                    . '-' . str_pad($num, 2, '0', STR_PAD_LEFT);
 
                 // Generate QR
                 $qrImage = QrCode::size(300)->generate($kodeUnit);
@@ -103,7 +105,7 @@ class AlatUnitController extends Controller
 
             return response()->json([
                 'message' => 'Gagal menambah unit',
-                'error' => $e->getMessage(), // 🔥 penting
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -162,5 +164,26 @@ class AlatUnitController extends Controller
         return response()->json([
             'message' => 'Unit berhasil dihapus'
         ]);
+    }
+
+    public function cariByKode($kode)
+    {
+        $unit = AlatUnit::with([
+            'alat.kategori',
+            'detailPeminjaman' => function ($q) {
+                $q->with(['peminjaman.user'])
+                    ->whereHas('peminjaman', function ($q2) {
+                        $q2->whereIn('status', [
+                            'dipinjam',
+                            'pengembalian_diajukan',
+                            'menunggu_pembayaran'
+                        ]);
+                    })->latest()->limit(1);
+            }
+        ])->where('kode_unit', $kode)->first();
+
+        if (!$unit) return response()->json(['message' => 'Unit tidak ditemukan'], 404);
+
+        return response()->json(['unit' => $unit]);
     }
 }
