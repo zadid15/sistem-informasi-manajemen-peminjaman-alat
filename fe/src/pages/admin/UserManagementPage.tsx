@@ -36,7 +36,7 @@ export default function UserManagementPage() {
         confirm_password: '',
         role: 'peminjam' as UserRole,
         phone: '',
-        is_active: 'true' as UserStatus,
+        is_active: 'aktif' as UserStatus,
     });
 
     useEffect(() => {
@@ -58,6 +58,7 @@ export default function UserManagementPage() {
             );
 
             setUsers(res.users);
+            setPagination(res.pagination);
         } catch (error) {
             console.error(error);
             toast.error("Gagal mengambil data user");
@@ -71,7 +72,6 @@ export default function UserManagementPage() {
             try {
                 setLoading(true);
 
-                // delay 800ms biar skeleton keliatan
                 await new Promise(resolve => setTimeout(resolve, 500));
 
                 const res = await getUsers(
@@ -91,14 +91,6 @@ export default function UserManagementPage() {
 
         loadUsers();
     }, [currentPage, debouncedSearch, roleFilter]);
-
-    const filteredUsers = users.filter((user) => {
-        const matchesSearch =
-            user.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-        return matchesSearch && matchesRole;
-    });
 
     const handleAdd = async () => {
         try {
@@ -203,7 +195,7 @@ export default function UserManagementPage() {
     const statusColors = {
         aktif: 'bg-green-100 text-green-800',
         nonaktif: 'bg-red-100 text-red-800',
-    }
+    };
 
     const statusLabels = {
         aktif: 'Aktif',
@@ -245,9 +237,9 @@ export default function UserManagementPage() {
                                     page: "1",
                                     search: value,
                                     role: roleFilter,
-                                })
+                                });
                             }}
-                            className="pl-10 "
+                            className="pl-10"
                         />
                     </div>
                     <Select
@@ -288,40 +280,29 @@ export default function UserManagementPage() {
                                 )}
                             </tr>
                         </thead>
-
                         <tbody className="divide-y">
                             {Array.from({ length: 5 }).map((_, row) => (
                                 <tr key={row} className="animate-pulse">
-                                    <td className="px-6 py-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>  {/* Nama */}
-                                    <td className="px-6 py-4"><div className="h-4 w-40 bg-gray-200 rounded" /></td>  {/* Email */}
-                                    <td className="px-6 py-4"><div className="h-5 w-16 bg-gray-200 rounded-full" /></td>  {/* Role - badge */}
-                                    <td className="px-6 py-4"><div className="h-4 w-28 bg-gray-200 rounded" /></td>  {/* No. Telepon */}
-                                    <td className="px-6 py-4"><div className="h-5 w-16 bg-gray-200 rounded-full" /></td>  {/* Status - badge */}
-                                    <td className="px-6 py-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>  {/* Terdaftar */}
-                                    <td className="px-6 py-4 text-right"><div className="h-8 w-8 bg-gray-200 rounded-md inline-block" /></td>  {/* Aksi */}
+                                    <td className="px-6 py-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>
+                                    <td className="px-6 py-4"><div className="h-4 w-40 bg-gray-200 rounded" /></td>
+                                    <td className="px-6 py-4"><div className="h-5 w-16 bg-gray-200 rounded-full" /></td>
+                                    <td className="px-6 py-4"><div className="h-4 w-28 bg-gray-200 rounded" /></td>
+                                    <td className="px-6 py-4"><div className="h-5 w-16 bg-gray-200 rounded-full" /></td>
+                                    <td className="px-6 py-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>
+                                    <td className="px-6 py-4 text-right"><div className="h-8 w-8 bg-gray-200 rounded-md inline-block" /></td>
                                 </tr>
                             ))}
                         </tbody>
-
-                        {/* ================= SKELETON FOOTER ================= */}
                         <tfoot>
                             <tr>
                                 <td colSpan={7} className="p-0">
                                     <div className="flex flex-col md:flex-row items-center justify-between p-4 border-t border-gray-200 gap-3 bg-gray-300 min-h-[56px]">
-                                        {/* INFO */}
                                         <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
-
-                                        {/* PAGINATION */}
                                         <div className="flex items-center gap-1">
                                             <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
-
                                             {Array.from({ length: 3 }).map((_, i) => (
-                                                <div
-                                                    key={i}
-                                                    className="h-8 w-8 mx-1 bg-gray-200 rounded animate-pulse"
-                                                />
+                                                <div key={i} className="h-8 w-8 mx-1 bg-gray-200 rounded animate-pulse" />
                                             ))}
-
                                             <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
                                         </div>
                                     </div>
@@ -329,7 +310,7 @@ export default function UserManagementPage() {
                             </tr>
                         </tfoot>
                     </table>
-                ) : filteredUsers.length === 0 ? (
+                ) : users.length === 0 ? (
                     <EmptyState
                         icon={UserPlus}
                         title="Tidak ada user yang ditemukan"
@@ -351,7 +332,7 @@ export default function UserManagementPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {filteredUsers.map((user) => (
+                                {users.map((user) => (
                                     <tr key={user.id} className="hover:bg-gray-50">
                                         <td className="py-4 px-6">
                                             <p className="text-sm font-medium text-gray-900">{user.nama}</p>
@@ -404,8 +385,6 @@ export default function UserManagementPage() {
                             </tbody>
                         </table>
                         <div className="flex flex-col md:flex-row items-center justify-between p-4 border-t border-gray-200 gap-3 bg-gray-300">
-
-                            {/* Info */}
                             <p className="text-sm text-gray-900">
                                 Menampilkan {(pagination.current_page - 1) * pagination.per_page + 1}
                                 {" - "}
@@ -413,18 +392,14 @@ export default function UserManagementPage() {
                                 {" dari "}
                                 {pagination.total} data
                             </p>
-
-                            {/* Pagination Controls */}
                             <div className="flex items-center gap-1">
-
-                                {/* Prev */}
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     disabled={pagination.current_page === 1}
                                     onClick={() =>
                                         setSearchParams({
-                                            page: String(pagination.current_page - 1),
+                                            page: String(currentPage - 1),
                                             search: debouncedSearch,
                                             role: roleFilter,
                                         })
@@ -433,8 +408,6 @@ export default function UserManagementPage() {
                                     <ArrowLeft />
                                     Prev
                                 </Button>
-
-                                {/* Page Numbers */}
                                 {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
                                     <Button
                                         key={page}
@@ -452,15 +425,13 @@ export default function UserManagementPage() {
                                         {page}
                                     </Button>
                                 ))}
-
-                                {/* Next */}
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     disabled={pagination.current_page === pagination.last_page}
                                     onClick={() =>
                                         setSearchParams({
-                                            page: String(pagination.current_page + 1),
+                                            page: String(currentPage + 1),
                                             search: debouncedSearch,
                                             role: roleFilter,
                                         })
@@ -481,55 +452,39 @@ export default function UserManagementPage() {
                     <DialogHeader>
                         <DialogTitle>Tambah User Baru</DialogTitle>
                     </DialogHeader>
-
                     <div className="space-y-6">
-                        {/* FORM */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="col-span-2">
                                 <Label>Nama Lengkap</Label>
                                 <Input
                                     value={formData.nama}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, nama: e.target.value })
-                                    }
+                                    onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
                                     placeholder="Contoh: Johan"
                                 />
                             </div>
-
                             <div className="col-span-2">
                                 <Label>Email</Label>
                                 <Input
                                     type="email"
                                     value={formData.email}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, email: e.target.value })
-                                    }
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     placeholder="Contoh: johan@gmail.com"
                                 />
                             </div>
-
                             <div>
                                 <Label>Password</Label>
                                 <Input
                                     type="text"
                                     value={formData.password}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, password: e.target.value })
-                                    }
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     placeholder="Contoh: Joh4n123"
                                 />
                             </div>
-
                             <div>
                                 <Label>Role</Label>
                                 <Select
                                     value={formData.role}
-                                    onValueChange={(value) =>
-                                        setFormData({
-                                            ...formData,
-                                            role: value as UserRole,
-                                        })
-                                    }
+                                    onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Pilih role" />
@@ -543,7 +498,6 @@ export default function UserManagementPage() {
                             </div>
                         </div>
                     </div>
-
                     <DialogFooter>
                         <Button
                             variant="outline"
@@ -649,5 +603,5 @@ export default function UserManagementPage() {
                 variant="danger"
             />
         </div>
-    )
+    );
 }

@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/peminjaman', [PeminjamanController::class, 'index']);
     Route::post('/peminjaman/{id}/setujui', [PeminjamanController::class, 'setujui']);
     Route::post('/peminjaman/{id}/tolak', [PeminjamanController::class, 'tolak']);
+    Route::post('/peminjaman/{id}/konfirmasi-pengambilan', [PeminjamanController::class, 'konfirmasiPengambilan']);
     Route::post('/peminjaman/{id}/konfirmasi-pengembalian', [PeminjamanController::class, 'konfirmasiPengembalian']);
     Route::patch('/peminjaman/{id}/lihat', [PeminjamanController::class, 'lihat']);
     Route::get('/peminjaman/{id}/detail-petugas', [PeminjamanController::class, 'detailPetugas']);

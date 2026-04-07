@@ -10,6 +10,7 @@ export interface GetPeminjamanParams {
     page?: number;
     per_page?: number;
     search?: string;
+    status?: string;
 }
 
 export const getPeminjaman = async (params?: GetPeminjamanParams) => {

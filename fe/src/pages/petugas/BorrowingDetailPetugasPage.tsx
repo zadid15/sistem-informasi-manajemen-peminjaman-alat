@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { tolakPeminjaman, setujuiPeminjaman } from "../../services/peminjamanService";
+import { tolakPeminjaman } from "../../services/peminjamanService";
 import axiosInstance from "../../utils/axios";
 import { Button } from "../../components/ui/button";
 import { createPortal } from "react-dom";
@@ -12,6 +12,7 @@ type StatusPeminjaman =
     | 'terkirim'
     | 'menunggu_konfirmasi'
     | 'disetujui'
+    | 'menunggu_pengambilan_alat'
     | 'ditolak'
     | 'dipinjam'
     | 'pengembalian_diajukan'
@@ -61,6 +62,8 @@ type DetailPeminjamanPetugas = {
 const TIMELINE_STEPS = [
     { key: "terkirim", label: "Terkirim" },
     { key: "menunggu_konfirmasi", label: "Menunggu Konfirmasi" },
+    { key: "disetujui", label: "Disetujui" },
+    { key: "menunggu_pengambilan_alat", label: "Menunggu Pengambilan" },
     { key: "dipinjam", label: "Dipinjam" },
     { key: "pengembalian_diajukan", label: "Pengembalian Diajukan" },
     { key: "dikembalikan", label: "Dikembalikan" },
@@ -69,7 +72,8 @@ const TIMELINE_STEPS = [
 function getStepIndex(status: string) {
     if (status === "dikembalikan_terlambat") return TIMELINE_STEPS.length - 1;
     if (status === "ditolak") return 1;
-    if (status === "menunggu_pembayaran") return 3;
+    if (status === "menunggu_pembayaran") return 5;
+    if (status === "menunggu_pengambilan_alat") return 3;
     return TIMELINE_STEPS.findIndex(s => s.key === status);
 }
 
@@ -77,6 +81,7 @@ const statusColors: Record<StatusPeminjaman, string> = {
     terkirim: 'bg-blue-100 text-blue-800',
     menunggu_konfirmasi: 'bg-indigo-100 text-indigo-800',
     disetujui: 'bg-green-100 text-green-800',
+    menunggu_pengambilan_alat: 'bg-cyan-100 text-cyan-800',
     ditolak: 'bg-red-100 text-red-800',
     dipinjam: 'bg-yellow-100 text-yellow-800',
     pengembalian_diajukan: 'bg-purple-100 text-purple-800',
@@ -89,6 +94,7 @@ const statusLabels: Record<StatusPeminjaman, string> = {
     terkirim: 'TERKIRIM',
     menunggu_konfirmasi: 'MENUNGGU KONFIRMASI',
     disetujui: 'DISETUJUI',
+    menunggu_pengambilan_alat: 'MENUNGGU PENGAMBILAN ALAT',
     ditolak: 'DITOLAK',
     dipinjam: 'DIPINJAM',
     pengembalian_diajukan: 'PENGEMBALIAN DIAJUKAN',
@@ -224,8 +230,23 @@ export default function BorrowingDetailPetugasPage() {
     };
 
     const handleSetujui = async () => {
+        if (!data) return;
+        setSubmitting(true);
+        try {
+            await axiosInstance.post(`/peminjaman/${id}/setujui`);
+            toast.success("Peminjaman berhasil disetujui");
+            const res = await axiosInstance.get(`/peminjaman/${id}/detail-petugas`);
+            setData(res.data.data.peminjaman);
+        } catch {
+            toast.error("Gagal menyetujui peminjaman");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleKonfirmasiPengambilan = async () => {
         if (!allUnitFilled) {
-            toast.error("Kondisi dan foto semua unit wajib diisi");
+            toast.error("Foto semua unit wajib diisi");
             return;
         }
         if (!allChecked) {
@@ -241,12 +262,14 @@ export default function BorrowingDetailPetugasPage() {
                 formData.append(`units[${index}][kondisi_sebelum]`, kondisiPerUnit[item.id]);
                 formData.append(`units[${index}][foto_sebelum]`, fotoPerUnit[item.id]);
             });
-            await setujuiPeminjaman(Number(id), formData);
-            toast.success("Peminjaman berhasil disetujui");
+            await axiosInstance.post(`/peminjaman/${id}/konfirmasi-pengambilan`, formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            toast.success("Pengambilan alat dikonfirmasi");
             const res = await axiosInstance.get(`/peminjaman/${id}/detail-petugas`);
             setData(res.data.data.peminjaman);
         } catch {
-            toast.error("Gagal menyetujui peminjaman");
+            toast.error("Gagal mengkonfirmasi pengambilan");
         } finally {
             setSubmitting(false);
         }
@@ -549,80 +572,15 @@ export default function BorrowingDetailPetugasPage() {
             {data.status === "menunggu_konfirmasi" && (
                 <div className="bg-white rounded-xl border p-6 space-y-6">
                     <h2 className="text-md font-semibold text-gray-900">Tindakan Petugas</h2>
-
                     {!showTolakForm && (
-                        <div className="space-y-5">
-                            <div className="space-y-4">
-                                {data.detail_peminjaman.map((item) => (
-                                    <div key={item.id} className="border rounded-xl p-4 space-y-3">
-                                        <p className="text-sm font-semibold text-gray-800">
-                                            {item.alat_unit.alat.nama_alat}
-                                            <span className="font-mono text-xs text-gray-400 ml-2">({item.alat_unit.kode_unit})</span>
-                                        </p>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Kondisi Sebelum Dipinjam <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                value="baik"
-                                                disabled
-                                                className="w-full rounded-lg border px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
-                                            >
-                                                <option value="baik">Baik</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Foto Alat <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (!file) return;
-                                                    setFotoPerUnit(prev => ({ ...prev, [item.id]: file }));
-                                                    setFotoPreviewPerUnit(prev => ({ ...prev, [item.id]: URL.createObjectURL(file) }));
-                                                }}
-                                                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-lime-100 file:text-lime-700 hover:file:bg-lime-200 cursor-pointer"
-                                            />
-                                            {fotoPreviewPerUnit[item.id] && (
-                                                <img src={fotoPreviewPerUnit[item.id]} alt="Preview" className="mt-3 rounded-lg max-h-48 object-cover" />
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {allUnitFilled && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle2 size={16} className="text-amber-600" />
-                                        <p className="text-sm font-semibold text-amber-800">Konfirmasi Sebelum Menyetujui</p>
-                                    </div>
-                                    <p className="text-xs text-amber-700">Pastikan semua informasi sudah benar sebelum menyetujui peminjaman ini.</p>
-                                    {[
-                                        { key: "kondisiSesuai", label: "Kondisi semua unit sudah sesuai dengan kondisi fisik alat saat ini" },
-                                        { key: "fotoSesuai", label: "Foto yang diupload adalah foto alat yang benar dan terkini" },
-                                        { key: "dataBenar", label: "Saya telah memeriksa data peminjaman dan menyatakan informasi sudah benar" },
-                                    ].map(({ key, label }) => (
-                                        <label key={key} className="flex items-start gap-3 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                checked={checks[key as keyof typeof checks]}
-                                                onChange={(e) => setChecks(prev => ({ ...prev, [key]: e.target.checked }))}
-                                                className="mt-0.5 h-4 w-4 accent-lime-700 cursor-pointer"
-                                            />
-                                            <span className="text-sm text-gray-700 group-hover:text-gray-900">{label}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="flex gap-3 pt-2">
+                        <div className="space-y-4">
+                            <p className="text-sm text-gray-600">
+                                Periksa data peminjaman dan putuskan untuk menyetujui atau menolak permohonan ini.
+                            </p>
+                            <div className="flex gap-3">
                                 <button
                                     onClick={handleSetujui}
-                                    disabled={submitting || !allChecked || !allUnitFilled}
+                                    disabled={submitting}
                                     className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                     {submitting ? "Menyetujui..." : "Setujui Peminjaman"}
@@ -637,7 +595,6 @@ export default function BorrowingDetailPetugasPage() {
                             </div>
                         </div>
                     )}
-
                     {showTolakForm && (
                         <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-4">
                             <p className="text-sm font-semibold text-red-800">Form Penolakan</p>
@@ -660,6 +617,90 @@ export default function BorrowingDetailPetugasPage() {
                             </div>
                         </div>
                     )}
+                </div>
+            )}
+
+            {data.status === "menunggu_pengambilan_alat" && (
+                <div className="bg-white rounded-xl border p-6 space-y-6">
+                    <h2 className="text-md font-semibold text-gray-900">Konfirmasi Pengambilan Alat</h2>
+                    <p className="text-sm text-gray-600">
+                        Peminjam telah datang untuk mengambil alat. Foto dan catat kondisi awal setiap unit sebelum diserahkan.
+                    </p>
+
+                    <div className="space-y-4">
+                        {data.detail_peminjaman.map((item) => (
+                            <div key={item.id} className="border rounded-xl p-4 space-y-3">
+                                <p className="text-sm font-semibold text-gray-800">
+                                    {item.alat_unit.alat.nama_alat}
+                                    <span className="font-mono text-xs text-gray-400 ml-2">({item.alat_unit.kode_unit})</span>
+                                </p>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Kondisi Sebelum Dipinjam <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value="baik"
+                                        disabled
+                                        className="w-full rounded-lg border px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                                    >
+                                        <option value="baik">Baik</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Foto Alat <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            setFotoPerUnit(prev => ({ ...prev, [item.id]: file }));
+                                            setFotoPreviewPerUnit(prev => ({ ...prev, [item.id]: URL.createObjectURL(file) }));
+                                        }}
+                                        className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-lime-100 file:text-lime-700 hover:file:bg-lime-200 cursor-pointer"
+                                    />
+                                    {fotoPreviewPerUnit[item.id] && (
+                                        <img src={fotoPreviewPerUnit[item.id]} alt="Preview" className="mt-3 rounded-lg max-h-48 object-cover" />
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {allUnitFilled && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 size={16} className="text-amber-600" />
+                                <p className="text-sm font-semibold text-amber-800">Konfirmasi Sebelum Menyerahkan</p>
+                            </div>
+                            <p className="text-xs text-amber-700">Pastikan semua foto dan kondisi alat sudah benar sebelum diserahkan ke peminjam.</p>
+                            {[
+                                { key: "kondisiSesuai", label: "Kondisi semua unit sudah sesuai dengan kondisi fisik alat saat ini" },
+                                { key: "fotoSesuai", label: "Foto yang diupload adalah foto alat yang benar dan terkini" },
+                                { key: "dataBenar", label: "Saya telah memeriksa dan menyatakan alat siap diserahkan ke peminjam" },
+                            ].map(({ key, label }) => (
+                                <label key={key} className="flex items-start gap-3 cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        checked={checks[key as keyof typeof checks]}
+                                        onChange={(e) => setChecks(prev => ({ ...prev, [key]: e.target.checked }))}
+                                        className="mt-0.5 h-4 w-4 accent-lime-700 cursor-pointer"
+                                    />
+                                    <span className="text-sm text-gray-700 group-hover:text-gray-900">{label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    )}
+
+                    <button
+                        onClick={handleKonfirmasiPengambilan}
+                        disabled={submitting || !allChecked || !allUnitFilled}
+                        className="w-full py-2.5 rounded-xl bg-lime-800 hover:bg-lime-700 text-white text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                        {submitting ? "Menyimpan..." : "Konfirmasi Pengambilan Alat"}
+                    </button>
                 </div>
             )}
 

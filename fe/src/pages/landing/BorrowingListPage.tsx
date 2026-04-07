@@ -12,6 +12,7 @@ const statusColors: Record<StatusPeminjaman, string> = {
     terkirim: 'bg-blue-100 text-blue-800',
     menunggu_konfirmasi: 'bg-indigo-100 text-indigo-800',
     disetujui: 'bg-green-100 text-green-800',
+    menunggu_pengambilan_alat: 'bg-cyan-100 text-cyan-800',
     ditolak: 'bg-red-100 text-red-800',
     dipinjam: 'bg-yellow-100 text-yellow-800',
     pengembalian_diajukan: 'bg-purple-100 text-purple-800',
@@ -23,6 +24,7 @@ const statusColors: Record<StatusPeminjaman, string> = {
 const statusLabels: Record<StatusPeminjaman, string> = {
     terkirim: 'TERKIRIM',
     menunggu_konfirmasi: 'MENUNGGU KONFIRMASI',
+    menunggu_pengambilan_alat: 'MENUNGGU PENGAMBILAN ALAT',
     disetujui: 'DISETUJUI',
     ditolak: 'DITOLAK',
     dipinjam: 'DIPINJAM',
@@ -94,9 +96,11 @@ export default function BorrowingListPage() {
                         <SelectContent>
                             <SelectItem value="all">Semua Status</SelectItem>
                             <SelectItem value="terkirim">Terkirim</SelectItem>
-                            <SelectItem value="disetujui">Disetujui</SelectItem>
+                            <SelectItem value="menunggu_konfirmasi">Menunggu Konfirmasi</SelectItem>
+                            <SelectItem value="menunggu_pengambilan_alat">Menunggu Pengambilan Alat</SelectItem>
                             <SelectItem value="ditolak">Ditolak</SelectItem>
                             <SelectItem value="dipinjam">Dipinjam</SelectItem>
+                            <SelectItem value="pengembalian_diajukan">Pengembalian Diajukan</SelectItem>
                             <SelectItem value="dikembalikan">Dikembalikan</SelectItem>
                         </SelectContent>
                     </Select>

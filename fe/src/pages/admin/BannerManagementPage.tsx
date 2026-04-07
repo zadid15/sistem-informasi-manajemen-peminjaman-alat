@@ -5,6 +5,7 @@ import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import axiosInstance from "../../utils/axios";
 import { EmptyState } from "../../components/shared/EmptyState";
+import { ConfirmDialog } from "../../components/shared/ConfirmDialog";
 
 type Banner = {
     id: number;
@@ -27,6 +28,7 @@ export default function BannerManagementPage() {
     const [editBanner, setEditBanner] = useState<Banner | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [togglingId, setTogglingId] = useState<number | null>(null);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
 
     const fetchBanners = async () => {
         setLoading(true);
@@ -58,17 +60,18 @@ export default function BannerManagementPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!confirm("Yakin ingin menghapus banner ini?")) return;
-        setDeletingId(id);
+    const handleDelete = async () => {
+        if (!deleteId) return;
+        setDeletingId(deleteId);
         try {
-            await axiosInstance.delete(`/banners/${id}`);
-            setBanners(prev => prev.filter(b => b.id !== id));
+            await axiosInstance.delete(`/banners/${deleteId}`);
+            setBanners(prev => prev.filter(b => b.id !== deleteId));
             toast.success("Banner berhasil dihapus");
         } catch {
             toast.error("Gagal menghapus banner");
         } finally {
             setDeletingId(null);
+            setDeleteId(null);
         }
     };
 
@@ -193,7 +196,7 @@ export default function BannerManagementPage() {
                                                 Edit
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(banner.id)}
+                                                onClick={() => setDeleteId(banner.id)}
                                                 disabled={deletingId === banner.id}
                                                 className="p-2 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition cursor-pointer disabled:opacity-50"
                                             >
@@ -207,6 +210,16 @@ export default function BannerManagementPage() {
                     </table>
                 )}
             </div>
+
+            <ConfirmDialog
+                isOpen={deleteId !== null}
+                onClose={() => setDeleteId(null)}
+                onConfirm={handleDelete}
+                title="Hapus Banner"
+                description={`Yakin ingin menghapus banner "${banners.find(b => b.id === deleteId)?.title}"?`}
+                confirmText="Hapus"
+                variant="danger"
+            />
 
             {/* Modal */}
             {showAddModal && (

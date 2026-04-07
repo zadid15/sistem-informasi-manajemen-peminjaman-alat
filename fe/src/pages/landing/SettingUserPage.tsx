@@ -19,58 +19,9 @@ type UserForm = {
     foto: File | string | null;
 };
 
-// ─── Skeleton Components ───────────────────────────────────────────────────────
-
 const Skeleton = ({ className }: { className?: string }) => (
     <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
 );
-
-function AvatarSkeleton() {
-    return (
-        <div className="flex flex-col items-center">
-            <Skeleton className="w-38 h-38 rounded-full" />
-            <Skeleton className="h-4 w-48 mt-2 mb-4" />
-        </div>
-    );
-}
-
-function ProfileFormSkeleton() {
-    return (
-        <div className="grid grid-cols-2 gap-4">
-            {/* Nama */}
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-            {/* Email */}
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-12" />
-                <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-            {/* Phone */}
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-            {/* Jenis Kelamin */}
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-            {/* Alamat */}
-            <div className="col-span-2 space-y-2">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-20 w-full rounded-md" />
-            </div>
-            {/* Button */}
-            <div className="col-span-2">
-                <Skeleton className="h-10 w-40 rounded-md mt-2 mb-6" />
-            </div>
-        </div>
-    );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
 
 export default function SettingUserPage() {
     const fileRef = useRef<HTMLInputElement>(null);
@@ -80,7 +31,6 @@ export default function SettingUserPage() {
 
     const [showConfirmProfile, setShowConfirmProfile] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
     const [originalUser, setOriginalUser] = useState<UserForm | null>(null);
 
     const [passwordError, setPasswordError] = useState({
@@ -88,16 +38,6 @@ export default function SettingUserPage() {
         new: "",
         confirm: "",
     });
-
-    const validateNewPassword = (value: string) => {
-        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-        return regex.test(value)
-            ? ""
-            : "Password minimal 8 karakter dan harus mengandung huruf besar, huruf kecil, dan angka";
-    };
-
-    const MAX_FILE_SIZE = 2 * 1024 * 1024;
-    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/jpg"];
 
     const [showPassword, setShowPassword] = useState({
         current: false,
@@ -121,6 +61,16 @@ export default function SettingUserPage() {
         confirm: "",
     });
 
+    const MAX_FILE_SIZE = 2 * 1024 * 1024;
+    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/jpg"];
+
+    const validateNewPassword = (value: string) => {
+        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+        return regex.test(value)
+            ? ""
+            : "Password minimal 8 karakter dan harus mengandung huruf besar, huruf kecil, dan angka";
+    };
+
     const isPasswordFilled =
         password.current.trim() !== "" &&
         password.new.trim() !== "" &&
@@ -136,10 +86,8 @@ export default function SettingUserPage() {
         const fetchUser = async () => {
             setLoading(true);
             const start = Date.now();
-
             try {
                 const data = await getMe();
-
                 const initialUser: UserForm = {
                     nama: data.nama,
                     email: data.email,
@@ -149,7 +97,6 @@ export default function SettingUserPage() {
                     alamat: data.alamat ?? "",
                     foto: data.foto ?? "",
                 };
-
                 setUser(initialUser);
                 setOriginalUser(initialUser);
                 setPreview(data.foto ?? null);
@@ -157,14 +104,9 @@ export default function SettingUserPage() {
                 toast.error("Gagal memuat data profil");
             } finally {
                 const elapsed = Date.now() - start;
-                const MIN_LOADING = 800; // 👈 atur disini (ms)
-
-                setTimeout(() => {
-                    setLoading(false);
-                }, Math.max(0, MIN_LOADING - elapsed));
+                setTimeout(() => setLoading(false), Math.max(0, 800 - elapsed));
             }
         };
-
         fetchUser();
     }, []);
 
@@ -184,7 +126,6 @@ export default function SettingUserPage() {
             toast.warning("Tidak ada perubahan");
             return;
         }
-
         try {
             const formData = new FormData();
             formData.append("_method", "PUT");
@@ -192,14 +133,10 @@ export default function SettingUserPage() {
             formData.append("phone", user.phone);
             formData.append("jenis_kelamin", user.jenis_kelamin);
             formData.append("alamat", user.alamat);
-
-            if (user.foto instanceof File) {
-                formData.append("foto", user.foto);
-            }
+            if (user.foto instanceof File) formData.append("foto", user.foto);
 
             const res = await updateMe(formData);
             const updatedUser = res.data;
-
             const syncedUser: UserForm = {
                 nama: updatedUser.nama,
                 email: updatedUser.email,
@@ -209,16 +146,12 @@ export default function SettingUserPage() {
                 alamat: updatedUser.alamat ?? "",
                 foto: updatedUser.foto ?? "",
             };
-
             setUser(syncedUser);
             setOriginalUser(syncedUser);
             setPreview(updatedUser.foto ? `${updatedUser.foto}?t=${Date.now()}` : null);
-
             if (fileRef.current) fileRef.current.value = "";
-
             localStorage.setItem("user", JSON.stringify(updatedUser));
             window.dispatchEvent(new Event("userUpdated"));
-
             toast.success("Profil berhasil diperbarui!");
         } catch {
             toast.error("Gagal memperbarui profil");
@@ -230,25 +163,21 @@ export default function SettingUserPage() {
             toast.warning("Password baru tidak boleh sama dengan password saat ini");
             return;
         }
-
         const newPasswordError = validateNewPassword(password.new);
         if (newPasswordError) {
             setPasswordError({ ...passwordError, new: newPasswordError });
             return;
         }
-
         if (password.new !== password.confirm) {
             setPasswordError({ ...passwordError, confirm: "Konfirmasi password tidak cocok" });
             return;
         }
-
         try {
             await changePassword({
                 current_password: password.current,
                 new_password: password.new,
                 new_password_confirmation: password.confirm,
             });
-
             toast.success("Password berhasil diubah!");
             setPassword({ current: "", new: "", confirm: "" });
             setPasswordError({ current: "", new: "", confirm: "" });
@@ -260,26 +189,23 @@ export default function SettingUserPage() {
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         if (!ALLOWED_TYPES.includes(file.type)) {
             toast.error("Foto harus berupa JPG, JPEG, atau PNG");
             e.target.value = "";
             return;
         }
-
         if (file.size > MAX_FILE_SIZE) {
             toast.error("Ukuran foto maksimal 2MB");
             e.target.value = "";
             return;
         }
-
         setPreview(URL.createObjectURL(file));
         setUser({ ...user, foto: file });
     };
 
     return (
         <div className="bg-white min-h-screen">
-            {/* Header — statis, selalu tampil */}
+            {/* Header — statis */}
             <section className="pt-52 pb-12 px-6 lg:px-8 bg-gradient-to-b from-gray-50/50 to-white">
                 <div className="max-w-7xl mx-auto">
                     <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
@@ -292,22 +218,21 @@ export default function SettingUserPage() {
             </section>
 
             <div className="max-w-7xl mx-auto">
-                {/* Avatar — skeleton saat loading */}
-                {loading ? (
-                    <AvatarSkeleton />
-                ) : (
-                    <div className="flex items-center gap-6">
-                        <div className="flex flex-col items-center">
+
+                {/* ── Avatar ── */}
+                <div className="flex items-center gap-6">
+                    <div className="flex flex-col items-center">
+
+                        {/* Skeleton hanya pada lingkaran foto (data dari BE) */}
+                        {loading ? (
+                            <Skeleton className="w-38 h-38 rounded-full" />
+                        ) : (
                             <div
                                 onClick={() => fileRef.current?.click()}
                                 className="relative w-38 h-38 rounded-full overflow-hidden border bg-gray-100 flex items-center justify-center cursor-pointer group"
                             >
                                 {preview ? (
-                                    <img
-                                        src={preview}
-                                        alt="Avatar"
-                                        className="w-full h-full object-cover"
-                                    />
+                                    <img src={preview} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
                                     <span className="text-sm text-gray-400">No Image</span>
                                 )}
@@ -315,96 +240,120 @@ export default function SettingUserPage() {
                                     <span className="text-xs text-white">Ganti</span>
                                 </div>
                             </div>
-                            <p className="text-md text-gray-500 mt-2 text-center mb-4">
-                                Format: JPG / PNG · Maksimal 2MB
-                            </p>
-                        </div>
+                        )}
 
-                        <Input
-                            ref={fileRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleAvatarChange}
-                        />
+                        {/* Caption statis — selalu tampil */}
+                        <p className="text-md text-gray-500 mt-2 text-center mb-4">
+                            Format: JPG / PNG · Maksimal 2MB
+                        </p>
                     </div>
-                )}
 
-                {/* Profile Form — skeleton saat loading */}
-                {loading ? (
-                    <ProfileFormSkeleton />
-                ) : (
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Nama */}
-                        <div>
-                            <Label className="text-md">Nama Lengkap</Label>
-                            <Input
-                                value={user.nama}
-                                onChange={(e) => setUser({ ...user, nama: e.target.value })}
-                            />
-                        </div>
+                    <Input
+                        ref={fileRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarChange}
+                    />
+                </div>
 
-                        {/* Email */}
-                        <div>
-                            <Label className="text-md">Email</Label>
-                            <Input value={user.email} disabled />
-                        </div>
+                {/* ── Profile Form ── */}
+                {/* Wrapper grid selalu ada; skeleton hanya mengganti label + input */}
+                <div className="grid grid-cols-2 gap-4">
 
-                        {/* Phone */}
-                        <div>
-                            <Label className="text-md">Nomor Telepon</Label>
-                            <Input
-                                value={user.phone}
-                                onChange={(e) => setUser({ ...user, phone: e.target.value })}
-                            />
-                        </div>
-
-                        {/* Jenis Kelamin */}
-                        <div>
-                            <Label className="text-md">Jenis Kelamin</Label>
-                            <Select
-                                value={user.jenis_kelamin}
-                                onValueChange={(value) => setUser({ ...user, jenis_kelamin: value })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih jenis kelamin" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Laki-laki">Laki-laki</SelectItem>
-                                    <SelectItem value="Perempuan">Perempuan</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Alamat */}
-                        <div className="col-span-2">
-                            <Label className="text-md">Alamat</Label>
-                            <Textarea
-                                value={user.alamat}
-                                onChange={(e) => setUser({ ...user, alamat: e.target.value })}
-                            />
-                        </div>
-
-                        {/* Button */}
-                        <div className="col-span-2">
-                            <Button
-                                onClick={() => setShowConfirmProfile(true)}
-                                disabled={!isProfileChanged()}
-                                className={`
-                                    ${isProfileChanged() ? "cursor-pointer" : "cursor-default"}
-                                    text-md mt-2 mb-6 disabled:opacity-60
-                                `}
-                            >
-                                Simpan Perubahan
-                            </Button>
-                        </div>
+                    {/* Nama */}
+                    <div>
+                        {loading
+                            ? <Skeleton className="h-4 w-28 mb-2" />
+                            : <Label className="text-md">Nama Lengkap</Label>
+                        }
+                        {loading
+                            ? <Skeleton className="h-10 w-full rounded-md" />
+                            : <Input value={user.nama} onChange={(e) => setUser({ ...user, nama: e.target.value })} />
+                        }
                     </div>
-                )}
 
-                {/* Change Password — statis, selalu tampil (tidak ada data dari BE) */}
+                    {/* Email */}
+                    <div>
+                        {loading
+                            ? <Skeleton className="h-4 w-12 mb-2" />
+                            : <Label className="text-md">Email</Label>
+                        }
+                        {loading
+                            ? <Skeleton className="h-10 w-full rounded-md" />
+                            : <Input value={user.email} disabled />
+                        }
+                    </div>
+
+                    {/* Phone */}
+                    <div>
+                        {loading
+                            ? <Skeleton className="h-4 w-32 mb-2" />
+                            : <Label className="text-md">Nomor Telepon</Label>
+                        }
+                        {loading
+                            ? <Skeleton className="h-10 w-full rounded-md" />
+                            : <Input value={user.phone} onChange={(e) => setUser({ ...user, phone: e.target.value })} />
+                        }
+                    </div>
+
+                    {/* Jenis Kelamin */}
+                    <div>
+                        {loading
+                            ? <Skeleton className="h-4 w-24 mb-2" />
+                            : <Label className="text-md">Jenis Kelamin</Label>
+                        }
+                        {loading
+                            ? <Skeleton className="h-10 w-full rounded-md" />
+                            : (
+                                <Select
+                                    value={user.jenis_kelamin}
+                                    onValueChange={(value) => setUser({ ...user, jenis_kelamin: value })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih jenis kelamin" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Laki-laki">Laki-laki</SelectItem>
+                                        <SelectItem value="Perempuan">Perempuan</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )
+                        }
+                    </div>
+
+                    {/* Alamat */}
+                    <div className="col-span-2">
+                        {loading
+                            ? <Skeleton className="h-4 w-16 mb-2" />
+                            : <Label className="text-md">Alamat</Label>
+                        }
+                        {loading
+                            ? <Skeleton className="h-20 w-full rounded-md" />
+                            : <Textarea value={user.alamat} onChange={(e) => setUser({ ...user, alamat: e.target.value })} />
+                        }
+                    </div>
+
+                    {/* Button Simpan Perubahan — statis, selalu tampil */}
+                    <div className="col-span-2">
+                        <Button
+                            onClick={() => setShowConfirmProfile(true)}
+                            disabled={loading || !isProfileChanged()}
+                            className={`
+                                ${!loading && isProfileChanged() ? "cursor-pointer" : "cursor-default"}
+                                text-md mt-2 mb-6 disabled:opacity-60
+                            `}
+                        >
+                            Simpan Perubahan
+                        </Button>
+                    </div>
+                </div>
+
+                {/* ── Change Password — statis, selalu tampil ── */}
                 <div className="border-t pt-6">
                     <h2 className="text-md font-semibold mb-4">Ganti Password</h2>
                     <div className="grid grid-cols-2 gap-4">
+
                         {/* Password saat ini */}
                         <div className="col-span-2">
                             <div className="relative flex items-center">
@@ -493,7 +442,7 @@ export default function SettingUserPage() {
                         </div>
                     </div>
 
-                    {/* Button */}
+                    {/* Button Simpan Password — statis */}
                     <div>
                         <Button
                             onClick={() => setShowConfirmPassword(true)}

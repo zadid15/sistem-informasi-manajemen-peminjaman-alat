@@ -16,6 +16,7 @@ export type StatusPeminjaman =
     | 'menunggu_konfirmasi'
     | 'disetujui'
     | 'ditolak'
+    | 'menunggu_pengambilan_alat'
     | 'dipinjam'
     | 'pengembalian_diajukan'
     | 'menunggu_pembayaran'
@@ -57,6 +58,7 @@ const statusColors: Record<StatusPeminjaman, string> = {
     terkirim: 'bg-blue-100 text-sm text-blue-800',
     menunggu_konfirmasi: 'bg-indigo-100 text-indigo-800 text-sm',
     disetujui: 'bg-green-100 text-green-800 text-sm',
+    menunggu_pengambilan_alat: 'bg-cyan-100 text-cyan-800 text-sm',
     ditolak: 'bg-red-100 text-red-800 text-sm',
     dipinjam: 'bg-yellow-100 text-yellow-800 text-sm',
     pengembalian_diajukan: 'bg-purple-100 text-purple-800 text-sm',
@@ -69,6 +71,7 @@ const statusLabels: Record<StatusPeminjaman, string> = {
     terkirim: 'TERKIRIM',
     menunggu_konfirmasi: 'MENUNGGU KONFIRMASI',
     disetujui: 'DISETUJUI',
+    menunggu_pengambilan_alat: 'MENUNGGU PENGAMBILAN ALAT',
     ditolak: 'DITOLAK',
     dipinjam: 'DIPINJAM',
     pengembalian_diajukan: 'PENGEMBALIAN DIAJUKAN',
@@ -111,6 +114,7 @@ export default function BorrowingManagementPage() {
                 const res = await getPeminjaman({
                     page: currentPage,
                     search: debouncedSearch || undefined,
+                    status: statusFilter !== "all" ? statusFilter : undefined,
                 });
                 setPeminjaman(res.data);
                 setPagination(res.pagination);
@@ -131,10 +135,8 @@ export default function BorrowingManagementPage() {
         });
     };
 
-    const filteredPeminjaman = statusFilter === "all"
-        ? peminjaman
-        : peminjaman.filter(p => p.status === statusFilter);
-
+    const filteredPeminjaman = peminjaman;
+    
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -174,6 +176,7 @@ export default function BorrowingManagementPage() {
                             <SelectItem value="all">Semua Status</SelectItem>
                             <SelectItem value="terkirim">Terkirim</SelectItem>
                             <SelectItem value="menunggu_konfirmasi">Menunggu Konfirmasi</SelectItem>
+                            <SelectItem value="menunggu_pengambilan_alat">Menunggu Pengambilan Alat</SelectItem>
                             <SelectItem value="dipinjam">Dipinjam</SelectItem>
                             <SelectItem value="ditolak">Ditolak</SelectItem>
                             <SelectItem value="dikembalikan">Dikembalikan</SelectItem>
@@ -294,6 +297,7 @@ export default function BorrowingManagementPage() {
                             <div className="flex items-center gap-1">
                                 <Button
                                     variant="outline" size="sm"
+                                    className="cursor-pointer"
                                     disabled={pagination.current_page === 1}
                                     onClick={() => setSearchParams({ page: String(currentPage - 1), search: debouncedSearch, status: statusFilter })}
                                 >
@@ -302,7 +306,7 @@ export default function BorrowingManagementPage() {
                                 {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
                                     <Button
                                         key={page}
-                                        className="w-8 h-8 mx-1"
+                                        className="w-8 h-8 mx-1 cursor-pointer"
                                         size="sm"
                                         variant={page === pagination.current_page ? "default" : "outline"}
                                         onClick={() => setSearchParams({ page: String(page), search: debouncedSearch, status: statusFilter })}
@@ -312,6 +316,7 @@ export default function BorrowingManagementPage() {
                                 ))}
                                 <Button
                                     variant="outline" size="sm"
+                                    className="cursor-pointer"
                                     disabled={pagination.current_page === pagination.last_page}
                                     onClick={() => setSearchParams({ page: String(pagination.current_page + 1), search: debouncedSearch, status: statusFilter })}
                                 >

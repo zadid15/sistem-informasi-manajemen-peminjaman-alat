@@ -24,18 +24,20 @@ class UserController extends Controller
             ], 403);
         }
 
-        // Ambil query parameter search
         $search = $request->query('search');
+        $role = $request->query('role');
 
         $query = User::select('id', 'nama', 'email', 'role', 'is_active', 'phone', 'created_at');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('nama', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('role', 'like', "%{$search}%")
-                    ->orWhere('is_active', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
+        }
+
+        if ($role && $role !== 'all') {
+            $query->where('role', $role);
         }
 
         $users = $query->paginate(10);

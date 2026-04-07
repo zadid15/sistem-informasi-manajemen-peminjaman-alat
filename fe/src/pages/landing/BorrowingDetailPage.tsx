@@ -23,6 +23,8 @@ type Pembayaran = {
 const TIMELINE_STEPS = [
     { key: "terkirim", label: "Terkirim" },
     { key: "menunggu_konfirmasi", label: "Menunggu Konfirmasi" },
+    { key: "disetujui", label: "Disetujui" },
+    { key: "menunggu_pengambilan_alat", label: "Menunggu Pengambilan Alat" },
     { key: "dipinjam", label: "Dipinjam" },
     { key: "pengembalian_diajukan", label: "Pengembalian Diajukan" },
     { key: "dikembalikan", label: "Dikembalikan" },
@@ -37,7 +39,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
     pengembalian_diajukan: { label: "PENGEMBALIAN DIAJUKAN", color: "text-purple-700", bg: "bg-purple-50", ring: "ring-purple-200" },
     dikembalikan: { label: "DIKEMBALIKAN", color: "text-gray-700", bg: "bg-gray-100", ring: "ring-gray-200" },
     dikembalikan_terlambat: { label: "DIKEMBALIKAN TERLAMBAT", color: "text-orange-700", bg: "bg-orange-50", ring: "ring-orange-200" },
-    menunggu_pembayaran: { label: "MENUNGGU PEMBAYARAN", color: "text-orange-700", bg: "bg-orange-50", ring: "ring-orange-200" },
+    menunggu_pembayaran: { label: "MENUNGGU PEMBAYARAN", color: "text-orange-700", bg: "bg-orange-50", ring: "ring-orange-200" }, menunggu_pengambilan_alat: { label: "MENUNGGU PENGAMBILAN ALAT", color: "text-cyan-700", bg: "bg-cyan-50", ring: "ring-cyan-200" },
 };
 
 const fmt = (n: number) =>
@@ -50,7 +52,7 @@ const formatDate = (date: string | null) => {
 
 function getStepIndex(status: string) {
     if (status === "dikembalikan_terlambat") return TIMELINE_STEPS.length - 1;
-    if (status === "menunggu_pembayaran") return 3;
+    if (status === "menunggu_pembayaran") return 5;
     return TIMELINE_STEPS.findIndex(step => step.key === status);
 }
 
@@ -570,6 +572,7 @@ export default function BorrowingDetailPage() {
                                             {data!.status === "disetujui" && "Silakan ambil alat dari petugas"}
                                             {data!.status === "terkirim" && "Permohonan telah dikirim"}
                                             {data!.status === "menunggu_konfirmasi" && "Menunggu persetujuan petugas"}
+                                            {data!.status === "menunggu_pengambilan_alat" && "Menunggu pengambilan alat"}
                                             {data!.status === "pengembalian_diajukan" && "Menunggu konfirmasi petugas"}
                                             {data!.status === "dikembalikan" && "Proses peminjaman selesai"}
                                             {data!.status === "dikembalikan_terlambat" && "Dikembalikan melebihi batas waktu"}

@@ -169,7 +169,7 @@ export default function CartPage() {
                         <p className="text-lg text-gray-600">Belum ada alat di keranjangmu, ayo tambahkan alat yang ingin dipinjam!</p>
                     </div>
                 </section>
-                <div className="flex flex-col items-center justify-center gap-3 mt-12 text-gray-400">
+                <div className="flex flex-col items-center justify-center gap-3 mt-12 mb-6 text-gray-400">
                     <ShoppingCart size={48} strokeWidth={1.5} />
                     <p className="text-center">Keranjang kosong</p>
                     <button

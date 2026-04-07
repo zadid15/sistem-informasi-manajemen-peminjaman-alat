@@ -373,8 +373,8 @@ export function EquipmentListPage() {
                           ? "bg-lime-50 text-lime-700"
                           : "bg-red-50 text-red-600"
                           }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${(item.unit_tersedia ?? 0) > 0 ? "bg-lime-500" : "bg-red-500"}`} />
-                          {(item.unit_tersedia ?? 0) > 0 ? `${item.unit_tersedia} unit tersedia` : "Tidak tersedia"}
+                          <span className={`${(item.unit_tersedia ?? 0) > 0 ? "w-1.5 h-1.5 rounded-full  bg-lime-500" : "bg-red-500"}`} />
+                          {(item.unit_tersedia ?? 0) > 0 ? `${item.unit_tersedia} unit tersedia` : "sedang tidak tersedia"}
                         </span>
                       </div>
 
