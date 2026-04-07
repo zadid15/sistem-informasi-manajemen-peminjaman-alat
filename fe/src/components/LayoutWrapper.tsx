@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import MainLayout from "../layout/MainLayout";
-import type { UserRole } from "../types/user";
+import type { UserRole, UserRoleDashboard } from "../types/user";
 import { getMe } from "../services/userService";
 import { toast } from "sonner";
 
@@ -53,7 +53,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     return (
         <MainLayout
             name={name}
-            role={role}
+            role={role as UserRoleDashboard}
             avatar={avatar?.foto ?? null}
             currentPage={currentPage}
             onNavigate={onNavigate}
